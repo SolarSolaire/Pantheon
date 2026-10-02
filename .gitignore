@@ -1,0 +1,15 @@
+# Environment Variables & Secrets
+.env
+*.env
+
+# Node Dependencies
+node_modules/
+
+# Frontend Build Output
+dist/
+build/
+
+# System & Logs
+.DS_Store
+Thumbs.db
+*.log
