@@ -88,11 +88,20 @@ export default function Login() {
         style={{
           display: "flex",
           justifyContent: "center",
+          gap: "12px",
           marginTop: "20px",
+          flexWrap: "wrap",
         }}
       >
         <button type="button" style={buttonStyle} onClick={handleNewAccount}>
           New to Pantheon?
+        </button>
+        <button
+          type="button"
+          style={{ ...buttonStyle, backgroundColor: "#4a5568" }}
+          onClick={() => navigate("/search")}
+        >
+          Preview Search Page
         </button>
       </div>
     </div>
