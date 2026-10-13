@@ -1,18 +1,7 @@
-// TODO: a home page needs to be created.
-// we just needs to at least display some featured movies from the api and have logout functionality.
-// also make sure to add the search bar, which has an enter button that executes the search result and loads up the Search.jsx page.
-// design the page to fit movie content, which can be connected later (just put placeholders for now)
-
-// the route is already defined in App.jsx
-
-// TODO: a home page needs to be created.
-// we just needs to at least display some featured movies from the api and have logout functionality.
-// also make sure to add the search bar, which has an enter button that executes the search result and loads up the Search.jsx page.
-// design the page to fit movie content, which can be connected later (just put placeholders for now)
-
-// the route is already defined in App.jsx
-
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Film, Search as SearchIcon } from "lucide-react";
+import Search from "./Search";
 
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 const API_URL = "https://api.themoviedb.org/3";
@@ -21,23 +10,62 @@ const BACKDROP_URL = "https://image.tmdb.org/t/p/w1280";
 
 export default function Home() {
   const [movies, setMovies] = useState([]);
-  const [search, setSearch] = useState("");
-  const [suggestions, setSuggestions] = useState([]);
-  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isSignedIn, setIsSignedIn] = useState(() => detectSignedIn());
+  const navigate = useNavigate();
+
+  // Placeholder data for recent user reviews side panel
+  const recentReviews = [
+    {
+      id: 1,
+      user: "Lunar",
+      movie: "Inception",
+      rating: 10,
+      text: "An absolute masterpiece of modern cinema!",
+    },
+    {
+      id: 2,
+      user: "AzazelPotato",
+      movie: "Interstellar",
+      rating: 8,
+      text: "Mind-bending score and visuals.",
+    },
+    {
+      id: 3,
+      user: "EliteViewer",
+      movie: "The Dark Knight",
+      rating: 10,
+      text: "Heath Ledger's performance is legendary.",
+    },
+  ];
 
   function detectSignedIn() {
-    const authKeys = ["token", "authToken", "accessToken", "jwt", "user", "currentUser", "authUser", "isAuthenticated"];
+    const authKeys = [
+      "token",
+      "authToken",
+      "accessToken",
+      "jwt",
+      "user",
+      "currentUser",
+      "authUser",
+      "isAuthenticated",
+    ];
     return authKeys.some((key) => {
       const value = localStorage.getItem(key) ?? sessionStorage.getItem(key);
-      if (!value || value === "null" || value === "undefined" || value === "false") return false;
+      if (
+        !value ||
+        value === "null" ||
+        value === "undefined" ||
+        value === "false"
+      )
+        return false;
       try {
         const parsed = JSON.parse(value);
         if (typeof parsed === "boolean") return parsed;
-        if (parsed && typeof parsed === "object") return Object.keys(parsed).length > 0;
+        if (parsed && typeof parsed === "object")
+          return Object.keys(parsed).length > 0;
       } catch (_) {
         // Non-empty token strings count as signed in.
       }
@@ -55,10 +83,9 @@ export default function Home() {
     };
   }, []);
 
-  // Keep the homepage collection independent from whatever is typed in the search bar.
   useEffect(() => {
     if (!API_KEY) {
-      setError("Please add your TMDB API token to your .env file.");
+      setError("Featured Movies from TMDB API will appear here");
       setLoading(false);
       return;
     }
@@ -77,13 +104,13 @@ export default function Home() {
               accept: "application/json",
             },
             signal: controller.signal,
-          }
+          },
         );
         if (!response.ok) {
           throw new Error(
             response.status === 401
               ? "Invalid TMDB API token. Check your credentials."
-              : `TMDB request failed: ${response.status}`
+              : `TMDB request failed: ${response.status}`,
           );
         }
         const data = await response.json();
@@ -101,80 +128,43 @@ export default function Home() {
     return () => controller.abort();
   }, []);
 
-  // Update autocomplete suggestions as the user types, without replacing popular movies.
-  useEffect(() => {
-    const query = search.trim();
-    if (!query) {
-      setSuggestions([]);
-      setSuggestionsLoading(false);
-      return undefined;
+  function handleSearchSubmit(e) {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/search?query=${encodeURIComponent(searchQuery.trim())}`);
+    } else {
+      navigate("/search");
     }
-    if (!API_KEY) return undefined;
-
-    const controller = new AbortController();
-    const timeout = setTimeout(async () => {
-      setSuggestionsLoading(true);
-      try {
-        const response = await fetch(
-          `${API_URL}/search/movie?query=${encodeURIComponent(query)}&language=en-US&page=1&include_adult=false`,
-          {
-            headers: {
-              Authorization: `Bearer ${API_KEY}`,
-              accept: "application/json",
-            },
-            signal: controller.signal,
-          }
-        );
-        if (!response.ok) throw new Error("Could not load suggestions.");
-        const data = await response.json();
-        setSuggestions((data.results || []).slice(0, 6));
-      } catch (err) {
-        if (err.name !== "AbortError") setSuggestions([]);
-      } finally {
-        if (!controller.signal.aborted) setSuggestionsLoading(false);
-      }
-    }, 250);
-
-    return () => {
-      clearTimeout(timeout);
-      controller.abort();
-    };
-  }, [search]);
-
-  function handleSearchSubmit(event) {
-    event?.preventDefault?.();
-    const query = search.trim();
-    if (!query) return;
-    window.location.assign(`/Search?query=${encodeURIComponent(query)}`);
-  }
-
-  function handleSuggestionSelect(movie) {
-    setDropdownOpen(false);
-    window.location.assign(`/Search?query=${encodeURIComponent(movie.title)}`);
   }
 
   function handleAuthAction() {
     if (!isSignedIn) {
-      window.location.assign("/login");
+      navigate("/login");
       return;
     }
 
-    // Clear common authentication keys only; preserve movie preferences and other app data.
-    ["token", "authToken", "accessToken", "jwt", "user", "currentUser", "authUser", "isAuthenticated"].forEach((key) => {
+    [
+      "token",
+      "authToken",
+      "accessToken",
+      "jwt",
+      "user",
+      "currentUser",
+      "authUser",
+      "isAuthenticated",
+    ].forEach((key) => {
       localStorage.removeItem(key);
       sessionStorage.removeItem(key);
     });
     setIsSignedIn(false);
-    window.location.assign("/login");
+    navigate("/login");
   }
 
   const featuredMovie = movies.find((movie) => movie.backdrop_path);
 
   return (
     <div className="pantheon-app">
-
       <style>{`
-        /* Global reset and page theme */
         * {
           box-sizing: border-box;
         }
@@ -206,14 +196,15 @@ export default function Home() {
             BlinkMacSystemFont, "Segoe UI", sans-serif;
         }
 
-        /* Header and search */
+        /* Header and navigation */
         .navbar {
           position: sticky;
           top: 0;
           z-index: 10;
           display: flex;
           align-items: center;
-          gap: 32px;
+          justify-content: space-between;
+          gap: 24px;
           padding: 18px clamp(20px, 5vw, 72px);
           border-bottom: 1px solid #29282e;
           background: rgba(16, 16, 20, 0.94);
@@ -221,6 +212,9 @@ export default function Home() {
         }
 
         .logo {
+          display: flex;  
+          align-items: center;
+          gap: 10px;
           color: #f4c96b;
           font-size: 1.35rem;
           font-weight: 800;
@@ -229,115 +223,45 @@ export default function Home() {
           white-space: nowrap;
         }
 
-        .navbar-actions {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          margin-left: auto;
-        }
-
-        .search-wrap {
-          position: relative;
-          width: min(330px, 32vw);
-        }
-
-        .search-box {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          width: 100%;
-          padding: 0 13px;
-          border: 1px solid #393740;
-          border-radius: 10px;
-          background: #1b1a20;
-          color: #aaa7b2;
-        }
-
-        .search-box input {
-          width: 100%;
-          min-width: 0;
-          padding: 12px 0;
-          border: 0;
-          outline: 0;
-          background: transparent;
-          color: #f5f3ef;
-          font: inherit;
-        }
-
-        .search-box input::placeholder {
-          color: #85818d;
-        }
-
-        .suggestions-dropdown {
-          position: absolute;
-          top: calc(100% + 8px);
-          right: 0;
-          left: 0;
-          z-index: 30;
-          overflow: hidden;
-          border: 1px solid #393740;
-          border-radius: 10px;
-          background: #1b1a20;
-          box-shadow: 0 14px 32px #0008;
-        }
-
-        .suggestion-item {
+        .center-search-btn {
           display: flex;
           align-items: center;
           gap: 12px;
-          width: 100%;
-          padding: 10px 12px;
-          border: 0;
-          border-bottom: 1px solid #302e36;
-          background: transparent;
-          color: #f5f3ef;
-          text-align: left;
+          width: min(680px, 45vw);
+          padding: 14px 20px;
+          border: 1px solid #393740;
+          border-radius: 30px;
+          background: #1b1a20;
+          color: #85818d;
+          font-family: inherit;
+          font-size: 0.95rem;
+          font-weight: 500;
           cursor: pointer;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+          transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+          text-align: left;
         }
 
-        .suggestion-item:last-child {
-          border-bottom: 0;
-        }
-
-        .suggestion-item:hover,
-        .suggestion-item:focus-visible {
-          background: #292730;
-        }
-
-        .suggestion-poster {
-          flex: 0 0 34px;
-          width: 34px;
-          height: 48px;
-          border-radius: 4px;
-          background: #302e36;
-          object-fit: cover;
-        }
-
-        .suggestion-title,
-        .suggestion-year {
-          display: block;
-        }
-
-        .suggestion-title {
-          font-size: 0.9rem;
-          font-weight: 700;
-        }
-
-        .suggestion-year {
-          margin-top: 3px;
+        .center-search-btn:hover {
+          border-color: #6a5935;
+          background: #242229;
           color: #aaa7b2;
-          font-size: 0.78rem;
+          transform: translateY(-1px);
         }
 
-        .suggestion-status {
-          padding: 13px;
-          color: #aaa7b2;
-          font-size: 0.86rem;
+        .search-btn-icon {
+          flex-shrink: 0;
         }
 
-        .search-submit,
+        .navbar-actions {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .account-btn,
         .logout-btn {
-          padding: 11px 15px;
+          padding: 10px 16px;
           border: 1px solid transparent;
           border-radius: 9px;
           font: inherit;
@@ -345,21 +269,24 @@ export default function Home() {
           white-space: nowrap;
           cursor: pointer;
           transition: transform 0.15s ease;
+          text-decoration: none;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
         }
 
-        .search-submit,
-        .login-btn {
-          background: #f4c96b;
-          color: #17140d;
-        }
-
-        .logout-btn {
-          border-color: #44414b;
+        .account-btn {
           background: #242229;
+          border-color: #44414b;
           color: #f0edf4;
         }
 
-        .search-submit:hover,
+        .logout-btn {
+          background: #d9534f;
+          color: #ffffff;
+        }
+
+        .account-btn:hover,
         .logout-btn:hover {
           transform: translateY(-1px);
         }
@@ -452,11 +379,20 @@ export default function Home() {
           color: #f5f3ef;
         }
 
-        /* Movie collection */
+        /* Main layout with sidebar */
         .main-content {
           width: min(1440px, 100%);
           margin: 0 auto;
           padding: 42px clamp(20px, 5vw, 72px) 70px;
+          display: grid;
+          grid-template-columns: 1fr 320px;
+          gap: 40px;
+        }
+
+        @media (max-width: 1024px) {
+          .main-content {
+            grid-template-columns: 1fr;
+          }
         }
 
         .content-intro {
@@ -544,9 +480,50 @@ export default function Home() {
           -webkit-line-clamp: 2;
         }
 
-        .movie-meta {
+        /* Sidebar for Recent Reviews */
+        .sidebar {
+          background: #151419;
+          border: 1px solid #29282e;
+          border-radius: 14px;
+          padding: 24px;
+          height: fit-content;
+        }
+
+        .sidebar h3 {
+          margin-top: 0;
+          margin-bottom: 20px;
+          font-size: 1.25rem;
+          color: #f4c96b;
+          border-bottom: 1px solid #29282e;
+          padding-bottom: 10px;
+        }
+
+        .review-card {
+          background: #1b1a20;
+          border: 1px solid #2e2c35;
+          border-radius: 10px;
+          padding: 14px;
+          margin-bottom: 14px;
+        }
+
+        .review-header {
+          display: flex;
           justify-content: space-between;
-          font-size: 0.82rem;
+          font-size: 0.85rem;
+          color: #aaa7b2;
+          margin-bottom: 6px;
+        }
+
+        .review-movie {
+          font-weight: 700;
+          color: #f5f3ef;
+        }
+
+        .review-text {
+          font-size: 0.9rem;
+          color: #d0cdd5;
+          margin: 0;
+          line-height: 1.4;
         }
 
         /* Loading and error messages */
@@ -566,138 +543,56 @@ export default function Home() {
 
         /* Keyboard accessibility */
         button:focus-visible,
-        a:focus-visible,
-        input:focus-visible {
+        a:focus-visible {
           outline: 2px solid #f4c96b;
           outline-offset: 3px;
         }
 
-        /* Responsive layout */
-        @media (max-width: 850px) {
+        @media (max-width: 768px) {
           .navbar {
-            flex-wrap: wrap;
-            gap: 16px;
+            flex-direction: column;
+            align-items: stretch;
           }
-
-          .navbar-actions {
-            margin-left: auto;
-          }
-
-          .search-wrap {
-            width: min(300px, 42vw);
-          }
-        }
-
-        @media (max-width: 560px) {
-          .navbar {
-            padding: 15px 16px;
-          }
-
-          .navbar-actions {
+          .center-search-btn {
             width: 100%;
-          }
-
-          .search-wrap {
-            flex: 1;
-            width: auto;
-            min-width: 0;
-          }
-
-          .search-box {
-            width: 100%;
-          }
-
-          .search-submit,
-          .logout-btn {
-            padding: 10px 11px;
-          }
-
-          .hero {
-            min-height: 360px;
-            padding: 42px 22px;
-          }
-
-          .main-content {
-            padding: 32px 16px 50px;
-          }
-
-          .movie-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 14px;
-          }
-
-          .movie-info {
-            padding: 11px;
           }
         }
       `}</style>
+
       <header className="navbar">
         <a className="logo" href="#">
+          <Film size={22} color="#f4c96b"></Film>
           <span>Pantheon</span>
         </a>
+
+        {/* Centered Search Button */}
+        <button
+          type="button"
+          className="center-search-btn"
+          onClick={() => navigate("/search")}
+        >
+          <SearchIcon
+            size={15}
+            color="#f4c96b"
+            className="search-btn-icon"
+          ></SearchIcon>
+          <span>Search for Movies...</span>
+        </button>
+
         <div className="navbar-actions">
-          <div className="search-wrap">
-            <form className="search-box" onSubmit={handleSearchSubmit}>
-              <span aria-hidden="true">⌕</span>
-              <input
-                type="search"
-                placeholder="Search movies..."
-                aria-label="Search movies"
-                value={search}
-                autoComplete="off"
-                aria-expanded={dropdownOpen && Boolean(search.trim())}
-                aria-controls="movie-search-suggestions"
-                onFocus={() => setDropdownOpen(true)}
-                onChange={(event) => {
-                  setSearch(event.target.value);
-                  setDropdownOpen(true);
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === "Escape") setDropdownOpen(false);
-                }}
-              />
-              {search && (
-                <button type="button" onClick={() => { setSearch(""); setDropdownOpen(false); }} aria-label="Clear search">
-                  ×
-                </button>
-              )}
-            </form>
-            {dropdownOpen && search.trim() && (
-              <div className="suggestions-dropdown" id="movie-search-suggestions" role="listbox" aria-label="Suggested movies">
-                {suggestionsLoading ? (
-                  <div className="suggestion-status">Searching movies…</div>
-                ) : suggestions.length ? (
-                  suggestions.map((movie) => (
-                    <button
-                      type="button"
-                      className="suggestion-item"
-                      role="option"
-                      aria-selected="false"
-                      key={movie.id}
-                      onClick={() => handleSuggestionSelect(movie)}
-                    >
-                      {movie.poster_path ? (
-                        <img className="suggestion-poster" src={`${IMAGE_URL}${movie.poster_path}`} alt="" />
-                      ) : (
-                        <span className="suggestion-poster" aria-hidden="true" />
-                      )}
-                      <span>
-                        <span className="suggestion-title">{movie.title}</span>
-                        <span className="suggestion-year">{movie.release_date?.slice(0, 4) || "Release year unknown"}</span>
-                      </span>
-                    </button>
-                  ))
-                ) : (
-                  <div className="suggestion-status">No matching movies found.</div>
-                )}
-              </div>
-            )}
-          </div>
-          <button type="button" className="search-submit" onClick={handleSearchSubmit}>
-            Enter
+          <button
+            type="button"
+            className="account-btn"
+            onClick={() => navigate("/profile")}
+          >
+            Account
           </button>
-          <button type="button" className={`logout-btn ${!isSignedIn ? "login-btn" : ""}`} onClick={handleAuthAction}>
-            {isSignedIn ? "Logout" : "Login"}
+          <button
+            type="button"
+            className={"logout-btn"}
+            onClick={handleAuthAction}
+          >
+            Logout
           </button>
         </div>
       </header>
@@ -725,19 +620,21 @@ export default function Home() {
             </div>
 
             <p>
-              {featuredMovie.overview ||
-                "Discover your next favorite movie."}
+              {featuredMovie.overview || "Discover your next favorite movie."}
             </p>
             <div className="hero-actions">
-              <a className="hero-cta" href={`/Search?query=${encodeURIComponent(featuredMovie.title)}`}>Explore film <span aria-hidden="true">↗</span></a>
-              <a className="hero-cta secondary" href="#movies">Browse popular movies</a>
+              <button className="hero-cta" onClick={() => navigate("/search")}>
+                Explore Search <span aria-hidden="true">↗</span>
+              </button>
+              <a className="hero-cta secondary" href="#movies">
+                Browse popular movies
+              </a>
             </div>
           </div>
         </section>
       )}
 
       <main className="main-content">
-
         <section id="movies">
           <div className="content-intro">
             <div>
@@ -752,53 +649,69 @@ export default function Home() {
           )}
 
           {!loading && !error && movies.length === 0 && (
-            <div className="status-message">
-              No movies found. Try another search.
-            </div>
+            <div className="status-message">No movies found.</div>
           )}
 
           {!loading && !error && movies.length > 0 && (
             <div className="movie-grid">
               {movies.map((movie) => (
-                  <article className="movie-card" key={movie.id}>
-                    <div className="poster-wrap">
-                      {movie.poster_path ? (
-                        <img
-                          className="poster"
-                          src={`${IMAGE_URL}${movie.poster_path}`}
-                          alt={`${movie.title} poster`}
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="poster-placeholder">
-                          Poster unavailable
-                        </div>
-                      )}
+                <article className="movie-card" key={movie.id}>
+                  <div className="poster-wrap">
+                    {movie.poster_path ? (
+                      <img
+                        className="poster"
+                        src={`${IMAGE_URL}${movie.poster_path}`}
+                        alt={`${movie.title} poster`}
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="poster-placeholder">
+                        Poster unavailable
+                      </div>
+                    )}
 
-                      <span className="rating-badge">
+                    <span className="rating-badge">
+                      ★ {movie.vote_average?.toFixed(1) ?? "N/A"}
+                    </span>
+                  </div>
+
+                  <div className="movie-info">
+                    <h3>{movie.title}</h3>
+
+                    <div className="movie-meta">
+                      <span>
+                        {movie.release_date?.slice(0, 4) || "Year unknown"}
+                      </span>
+                      <span className="movie-score">
                         ★ {movie.vote_average?.toFixed(1) ?? "N/A"}
                       </span>
-
                     </div>
-
-                    <div className="movie-info">
-                      <h3>{movie.title}</h3>
-
-                      <div className="movie-meta">
-                        <span>{movie.release_date?.slice(0, 4) || "Year unknown"}</span>
-                        <span className="movie-score">★ {movie.vote_average?.toFixed(1) ?? "N/A"}</span>
-                      </div>
-
-                    </div>
-                  </article>
-                )
-              )}
+                  </div>
+                </article>
+              ))}
             </div>
           )}
-        </section>        
+        </section>
+
+        {/* Recent Reviews Side Panel */}
+        <aside className="sidebar">
+          <h3>Recent User Reviews</h3>
+          {recentReviews.map((review) => (
+            <div className="review-card" key={review.id}>
+              <div className="review-header">
+                <span className="review-movie">{review.movie}</span>
+                <span className="gold">★ {review.rating}/10</span>
+              </div>
+              <p className="review-text">"{review.text}"</p>
+              <small
+                style={{ color: "#85818d", display: "block", marginTop: "6px" }}
+              >
+                - {review.user}
+              </small>
+            </div>
+          ))}
+        </aside>
       </main>
     </div>
   );
 }
-
-

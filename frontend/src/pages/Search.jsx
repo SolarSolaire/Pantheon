@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search as SearchIcon,
@@ -113,6 +113,72 @@ export default function Search() {
   const [activeRatingModal, setActiveRatingModal] = useState(null);
   const [ratingInput, setRatingInput] = useState("");
   const [ratingError, setRatingError] = useState("");
+  const [isSignedIn, setIsSignedIn] = useState(() => detectSignedIn());
+
+  function detectSignedIn() {
+    const authKeys = [
+      "token",
+      "authToken",
+      "accessToken",
+      "jwt",
+      "user",
+      "currentUser",
+      "authUser",
+      "isAuthenticated",
+    ];
+    return authKeys.some((key) => {
+      const value = localStorage.getItem(key) ?? sessionStorage.getItem(key);
+      if (
+        !value ||
+        value === "null" ||
+        value === "undefined" ||
+        value === "false"
+      )
+        return false;
+      try {
+        const parsed = JSON.parse(value);
+        if (typeof parsed === "boolean") return parsed;
+        if (parsed && typeof parsed === "object")
+          return Object.keys(parsed).length > 0;
+      } catch (_) {
+        // Non-empty token strings count as signed in.
+      }
+      return value.trim().length > 0;
+    });
+  }
+
+  useEffect(() => {
+    const syncAuthState = () => setIsSignedIn(detectSignedIn());
+    window.addEventListener("storage", syncAuthState);
+    window.addEventListener("focus", syncAuthState);
+    return () => {
+      window.removeEventListener("storage", syncAuthState);
+      window.removeEventListener("focus", syncAuthState);
+    };
+  }, []);
+
+  function handleAuthAction() {
+    if (!isSignedIn) {
+      navigate("/login");
+      return;
+    }
+
+    [
+      "token",
+      "authToken",
+      "accessToken",
+      "jwt",
+      "user",
+      "currentUser",
+      "authUser",
+      "isAuthenticated",
+    ].forEach((key) => {
+      localStorage.removeItem(key);
+      sessionStorage.removeItem(key);
+    });
+    setIsSignedIn(false);
+    navigate("/login");
+  }
 
   // Toggle watchlist state
   const handleToggleWatchlist = (movie) => {
@@ -192,20 +258,39 @@ export default function Search() {
 
   return (
     <div style={styles.page}>
+      <style>{`
+        html, body, #root {
+          margin: 0;
+          padding: 0;
+          width: 100%;
+          min-height: 100vh;
+          background-color: #101014;
+        }
+        * {
+          box-sizing: border-box;
+        }
+      `}</style>
+
       {/* Top Navigation Bar */}
       <header style={styles.navBar}>
-        <div style={styles.navBrand} onClick={() => navigate("/login")}>
-          <Film size={26} color="#e50914" />
-          <span style={styles.navLogoText}>PANTHEON</span>
-          <span style={styles.badge}>Preview Mode</span>
-        </div>
+        <a className="logo" href="#" onClick={(e) => { e.preventDefault(); navigate("/home"); }} style={styles.navBrand}>
+          <Film size={22} color="#f4c96b" />
+          <span>Pantheon</span>
+        </a>
         <div style={styles.navActions}>
           <button
-            onClick={() => navigate("/login")}
-            style={styles.backButton}
+            type="button"
+            style={styles.accountBtn}
+            onClick={() => navigate("/profile")}
           >
-            <ArrowLeft size={16} />
-            Back to Login
+            Account
+          </button>
+          <button
+            type="button"
+            style={styles.logoutBtn}
+            onClick={handleAuthAction}
+          >
+            Logout
           </button>
         </div>
       </header>
@@ -221,7 +306,7 @@ export default function Search() {
 
           {/* Search Bar Input */}
           <div style={styles.searchBarWrapper}>
-            <SearchIcon size={20} color="#888" style={styles.searchIcon} />
+            <SearchIcon size={20} color="#85818d" style={styles.searchIcon} />
             <input
               type="text"
               placeholder="Search by title, overview, or genre..."
@@ -258,7 +343,7 @@ export default function Search() {
             </div>
 
             <div style={styles.sortWrapper}>
-              <SlidersHorizontal size={15} color="#aaa" />
+              <SlidersHorizontal size={15} color="#aaa7b2" />
               <label style={styles.sortLabel}>Sort by:</label>
               <select
                 value={sortBy}
@@ -278,12 +363,12 @@ export default function Search() {
         {/* Results Counter / Info */}
         <div style={styles.resultsHeader}>
           <p style={styles.resultsCount}>
-            Showing <strong style={{ color: "#fff" }}>{filteredMovies.length}</strong> {filteredMovies.length === 1 ? "movie" : "movies"}
+            Showing <strong style={{ color: "#f5f3ef" }}>{filteredMovies.length}</strong> {filteredMovies.length === 1 ? "movie" : "movies"}
             {searchQuery && ` for "${searchQuery}"`}
             {selectedGenre !== "All" && ` in ${selectedGenre}`}
           </p>
           <div style={styles.apiNotice}>
-            <Sparkles size={14} color="#f59e0b" />
+            <Sparkles size={14} color="#f4c96b" />
             <span>Mock catalog active — ready for API connection</span>
           </div>
         </div>
@@ -291,7 +376,7 @@ export default function Search() {
         {/* Movies Grid */}
         {filteredMovies.length === 0 ? (
           <div style={styles.emptyState}>
-            <Film size={48} color="#555" />
+            <Film size={48} color="#85818d" />
             <h3 style={styles.emptyTitle}>No movies found</h3>
             <p style={styles.emptySubtitle}>
               Try searching with a different title or clearing your genre filter.
@@ -339,7 +424,7 @@ export default function Search() {
 
                     {/* Score badge */}
                     <div style={styles.ratingBadge}>
-                      <Star size={13} fill="#f59e0b" color="#f59e0b" />
+                      <Star size={13} fill="#f4c96b" color="#f4c96b" />
                       <span>{movie.vote_average.toFixed(1)}</span>
                     </div>
 
@@ -358,7 +443,7 @@ export default function Search() {
                         {movie.title}
                       </h2>
                       <div style={styles.movieMeta}>
-                        <Calendar size={13} color="#888" />
+                        <Calendar size={13} color="#85818d" />
                         <span>{releaseYear}</span>
                       </div>
                     </div>
@@ -370,7 +455,7 @@ export default function Search() {
                     {/* User Rating Indicator (if rated) */}
                     {userRating && (
                       <div style={styles.userRatedBar}>
-                        <Star size={13} fill="#e50914" color="#e50914" />
+                        <Star size={13} fill="#f4c96b" color="#f4c96b" />
                         <span>Your rating: <strong>{userRating} / 10</strong></span>
                       </div>
                     )}
@@ -405,7 +490,7 @@ export default function Search() {
                           ...styles.actionButtonPrimary
                         }}
                       >
-                        <Star size={14} fill={userRating ? "#f59e0b" : "none"} color="#f59e0b" />
+                        <Star size={14} fill={userRating ? "#f4c96b" : "none"} color="#f4c96b" />
                         <span>{userRating ? `${userRating} ★` : "Rate"}</span>
                       </button>
                     </div>
@@ -442,7 +527,7 @@ export default function Search() {
 
                 <div style={styles.modalMetaRow}>
                   <div style={styles.modalRatingBox}>
-                    <Star size={18} fill="#f59e0b" color="#f59e0b" />
+                    <Star size={18} fill="#f4c96b" color="#f4c96b" />
                     <span style={styles.modalRatingScore}>
                       {selectedMovie.vote_average.toFixed(1)}
                     </span>
@@ -486,7 +571,7 @@ export default function Search() {
                       ...styles.actionButtonPrimary
                     }}
                   >
-                    <Star size={16} fill={userRatings[selectedMovie.id] ? "#f59e0b" : "none"} color="#f59e0b" />
+                    <Star size={16} fill={userRatings[selectedMovie.id] ? "#f4c96b" : "none"} color="#f4c96b" />
                     <span>
                       {userRatings[selectedMovie.id]
                         ? `Your Rating: ${userRatings[selectedMovie.id]}/10`
@@ -525,7 +610,7 @@ export default function Search() {
             <form onSubmit={handleSaveRating}>
               {/* Score Display Card */}
               <div style={styles.scoreDisplayBox}>
-                <Star size={32} fill="#f59e0b" color="#f59e0b" />
+                <Star size={32} fill="#f4c96b" color="#f4c96b" />
                 <span style={styles.scoreDisplayNumber}>
                   {(() => {
                     const parsed = parseFloat(ratingInput);
@@ -634,93 +719,115 @@ export default function Search() {
   );
 }
 
-// Styling (Modern Dark-Mode Cinematic Theme)
+// Styling matching Home page cinematic theme (no white borders)
 const styles = {
   page: {
     minHeight: "100vh",
-    backgroundColor: "#0f1117",
-    color: "#f3f4f6",
+    backgroundColor: "#101014",
+    color: "#f5f3ef",
     fontFamily:
-      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif'
+      'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
   },
   navBar: {
-    height: "64px",
+    position: "sticky",
+    top: 0,
+    zIndex: 10,
+    height: "72px",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: "0 32px",
-    backgroundColor: "#161922",
-    borderBottom: "1px solid #232734",
-    position: "sticky",
-    top: 0,
-    zIndex: 20
+    padding: "0 clamp(20px, 5vw, 72px)",
+    backgroundColor: "rgba(16, 16, 20, 0.94)",
+    backdropFilter: "blur(14px)",
+    borderBottom: "1px solid #29282e"
   },
   navBrand: {
     display: "flex",
     alignItems: "center",
     gap: "10px",
-    cursor: "pointer"
-  },
-  navLogoText: {
-    fontSize: "20px",
+    cursor: "pointer",
+    color: "#f4c96b",
+    fontSize: "1.35rem",
     fontWeight: "800",
-    letterSpacing: "1.5px",
-    color: "#ffffff"
-  },
-  badge: {
-    fontSize: "11px",
-    padding: "3px 8px",
-    backgroundColor: "#2a2f3d",
-    color: "#9ca3af",
-    borderRadius: "12px",
-    marginLeft: "4px"
+    letterSpacing: "0.04em",
+    textDecoration: "none"
   },
   navActions: {
     display: "flex",
     alignItems: "center",
     gap: "12px"
   },
-  backButton: {
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-    backgroundColor: "transparent",
-    color: "#9ca3af",
-    border: "1px solid #323849",
-    padding: "7px 14px",
-    borderRadius: "6px",
-    fontSize: "13px",
+  accountBtn: {
+    padding: "10px 16px",
+    border: "1px solid #44414b",
+    borderRadius: "9px",
+    fontSize: "inherit",
+    fontWeight: "700",
+    backgroundColor: "#242229",
+    color: "#f0edf4",
     cursor: "pointer",
-    transition: "all 0.2s ease"
+    transition: "transform 0.15s ease",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  loginBtn: {
+    padding: "10px 16px",
+    border: "1px solid transparent",
+    borderRadius: "9px",
+    fontSize: "inherit",
+    fontWeight: "700",
+    backgroundColor: "#f4c96b",
+    color: "#17140d",
+    cursor: "pointer",
+    transition: "transform 0.15s ease",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  logoutBtn: {
+    padding: "10px 16px",
+    border: "1px solid transparent",
+    borderRadius: "9px",
+    fontSize: "inherit",
+    fontWeight: "700",
+    backgroundColor: "#d9534f",
+    color: "#ffffff",
+    cursor: "pointer",
+    transition: "transform 0.15s ease",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center"
   },
   container: {
-    maxWidth: "1280px",
+    maxWidth: "1440px",
     margin: "0 auto",
-    padding: "32px 24px 64px 24px"
+    padding: "42px clamp(20px, 5vw, 72px) 70px"
   },
   heroSection: {
     textAlign: "center",
     marginBottom: "36px"
   },
   heroTitle: {
-    fontSize: "32px",
+    fontSize: "clamp(2rem, 4vw, 3rem)",
     fontWeight: "800",
-    margin: "0 0 8px 0",
-    color: "#ffffff"
+    margin: "0 0 10px 0",
+    color: "#f5f3ef",
+    letterSpacing: "-0.04em"
   },
   heroSubtitle: {
-    fontSize: "15px",
-    color: "#9ca3af",
-    margin: "0 0 24px 0"
+    fontSize: "1rem",
+    color: "#aaa7b2",
+    margin: "0 0 28px 0"
   },
   searchBarWrapper: {
     position: "relative",
     maxWidth: "680px",
-    margin: "0 auto 24px auto"
+    margin: "0 auto 28px auto"
   },
   searchIcon: {
     position: "absolute",
-    left: "16px",
+    left: "18px",
     top: "50%",
     transform: "translateY(-50%)",
     pointerEvents: "none"
@@ -728,23 +835,23 @@ const styles = {
   searchInput: {
     width: "100%",
     boxSizing: "border-box",
-    padding: "14px 44px 14px 48px",
+    padding: "14px 44px 14px 50px",
     fontSize: "16px",
-    backgroundColor: "#1c202c",
-    border: "1px solid #2f364a",
+    backgroundColor: "#1b1a20",
+    border: "1px solid #393740",
     borderRadius: "30px",
-    color: "#fff",
+    color: "#f5f3ef",
     outline: "none",
-    boxShadow: "0 4px 14px rgba(0, 0, 0, 0.3)"
+    boxShadow: "0 4px 14px rgba(0, 0, 0, 0.4)"
   },
   clearButton: {
     position: "absolute",
-    right: "14px",
+    right: "16px",
     top: "50%",
     transform: "translateY(-50%)",
     background: "transparent",
     border: "none",
-    color: "#888",
+    color: "#85818d",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
@@ -756,7 +863,7 @@ const styles = {
     alignItems: "center",
     flexWrap: "wrap",
     gap: "16px",
-    maxWidth: "980px",
+    maxWidth: "1050px",
     margin: "0 auto"
   },
   genrePills: {
@@ -765,20 +872,20 @@ const styles = {
     flexWrap: "wrap"
   },
   genrePill: {
-    backgroundColor: "#1c202c",
-    color: "#9ca3af",
-    border: "1px solid #2f364a",
-    padding: "6px 14px",
+    backgroundColor: "#1b1a20",
+    color: "#aaa7b2",
+    border: "1px solid #393740",
+    padding: "8px 16px",
     borderRadius: "20px",
     fontSize: "13px",
     cursor: "pointer",
-    transition: "all 0.15s ease"
+    transition: "all 0.15s ease",
+    fontWeight: "600"
   },
   genrePillActive: {
-    backgroundColor: "#e50914",
-    borderColor: "#e50914",
-    color: "#ffffff",
-    fontWeight: "600"
+    backgroundColor: "#f4c96b",
+    borderColor: "#f4c96b",
+    color: "#17140d"
   },
   sortWrapper: {
     display: "flex",
@@ -787,56 +894,56 @@ const styles = {
   },
   sortLabel: {
     fontSize: "13px",
-    color: "#9ca3af"
+    color: "#aaa7b2"
   },
   sortSelect: {
-    backgroundColor: "#1c202c",
-    color: "#fff",
-    border: "1px solid #2f364a",
-    padding: "6px 10px",
-    borderRadius: "6px",
+    backgroundColor: "#1b1a20",
+    color: "#f5f3ef",
+    border: "1px solid #393740",
+    padding: "8px 12px",
+    borderRadius: "8px",
     fontSize: "13px",
-    cursor: "pointer"
+    cursor: "pointer",
+    outline: "none"
   },
   resultsHeader: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    borderBottom: "1px solid #232734",
-    paddingBottom: "12px",
-    marginBottom: "24px"
+    borderBottom: "1px solid #29282e",
+    paddingBottom: "14px",
+    marginBottom: "28px"
   },
   resultsCount: {
     margin: 0,
-    fontSize: "14px",
-    color: "#9ca3af"
+    fontSize: "0.9rem",
+    color: "#aaa7b2"
   },
   apiNotice: {
     display: "flex",
     alignItems: "center",
     gap: "6px",
-    fontSize: "12px",
-    color: "#f59e0b"
+    fontSize: "0.85rem",
+    color: "#f4c96b"
   },
   grid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-    gap: "24px"
+    gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))",
+    gap: "24px 18px"
   },
   card: {
-    backgroundColor: "#161922",
-    borderRadius: "12px",
+    backgroundColor: "#19181e",
+    borderRadius: "13px",
     overflow: "hidden",
-    border: "1px solid #232734",
+    border: "1px solid #2b2931",
     display: "flex",
     flexDirection: "column",
-    transition: "transform 0.2s ease, box-shadow 0.2s ease",
-    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.2)"
+    transition: "transform 0.2s ease, border-color 0.2s ease"
   },
   posterContainer: {
     position: "relative",
     aspectRatio: "2/3",
-    backgroundColor: "#1f2430",
+    backgroundColor: "#25232b",
     overflow: "hidden",
     cursor: "pointer"
   },
@@ -849,56 +956,54 @@ const styles = {
   posterOverlay: {
     position: "absolute",
     inset: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.45)",
+    backgroundColor: "rgba(16, 16, 20, 0.65)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     opacity: 0,
-    transition: "opacity 0.2s ease",
-    ":hover": {
-      opacity: 1
-    }
+    transition: "opacity 0.2s ease"
   },
   quickViewText: {
     display: "flex",
     alignItems: "center",
     gap: "6px",
-    backgroundColor: "rgba(0,0,0,0.75)",
-    color: "#fff",
-    padding: "6px 12px",
+    backgroundColor: "#101014",
+    color: "#f5f3ef",
+    padding: "8px 14px",
     borderRadius: "20px",
-    fontSize: "12px",
-    backdropFilter: "blur(4px)"
+    fontSize: "0.82rem",
+    fontWeight: "700",
+    border: "1px solid #393740"
   },
   ratingBadge: {
     position: "absolute",
     top: "10px",
     left: "10px",
-    backgroundColor: "rgba(15, 17, 23, 0.85)",
-    color: "#fff",
-    padding: "4px 8px",
-    borderRadius: "6px",
+    backgroundColor: "rgba(16, 16, 20, 0.85)",
+    color: "#f4c96b",
+    padding: "6px 8px",
+    borderRadius: "7px",
     display: "flex",
     alignItems: "center",
     gap: "4px",
-    fontSize: "12px",
-    fontWeight: "700",
-    backdropFilter: "blur(4px)"
+    fontSize: "0.82rem",
+    fontWeight: "800",
+    border: "1px solid rgba(255, 255, 255, 0.15)"
   },
   genreBadge: {
     position: "absolute",
     top: "10px",
     right: "10px",
-    backgroundColor: "rgba(30, 36, 48, 0.85)",
-    color: "#cbd5e1",
-    padding: "3px 8px",
-    borderRadius: "4px",
-    fontSize: "11px",
-    fontWeight: "500",
-    backdropFilter: "blur(4px)"
+    backgroundColor: "rgba(16, 16, 20, 0.85)",
+    color: "#aaa7b2",
+    padding: "5px 8px",
+    borderRadius: "6px",
+    fontSize: "0.75rem",
+    fontWeight: "700",
+    border: "1px solid rgba(255, 255, 255, 0.1)"
   },
   cardBody: {
-    padding: "16px",
+    padding: "14px",
     display: "flex",
     flexDirection: "column",
     flex: 1
@@ -908,14 +1013,14 @@ const styles = {
     justifyContent: "space-between",
     alignItems: "flex-start",
     gap: "8px",
-    marginBottom: "6px"
+    marginBottom: "8px"
   },
   movieTitle: {
-    fontSize: "16px",
+    fontSize: "1rem",
     fontWeight: "700",
     margin: 0,
-    color: "#fff",
-    lineHeight: "1.3",
+    color: "#f5f3ef",
+    lineHeight: "1.4",
     cursor: "pointer",
     overflow: "hidden",
     textOverflow: "ellipsis",
@@ -925,14 +1030,14 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: "4px",
-    fontSize: "12px",
-    color: "#888",
+    fontSize: "0.82rem",
+    color: "#aaa7b2",
     flexShrink: 0
   },
   overviewText: {
-    fontSize: "13px",
-    color: "#9ca3af",
-    lineHeight: "1.4",
+    fontSize: "0.85rem",
+    color: "#d0cdd5",
+    lineHeight: "1.5",
     margin: "0 0 14px 0",
     display: "-webkit-box",
     WebkitLineClamp: 3,
@@ -944,13 +1049,14 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: "6px",
-    backgroundColor: "#201720",
-    border: "1px solid #4a1924",
-    color: "#f87171",
+    backgroundColor: "#221d1b",
+    border: "1px solid #553d20",
+    color: "#f4c96b",
     padding: "6px 10px",
-    borderRadius: "6px",
-    fontSize: "12px",
-    marginBottom: "12px"
+    borderRadius: "8px",
+    fontSize: "0.8rem",
+    marginBottom: "12px",
+    fontWeight: "600"
   },
   cardActions: {
     display: "grid",
@@ -963,18 +1069,18 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     gap: "6px",
-    padding: "8px 12px",
-    borderRadius: "6px",
-    fontSize: "12px",
-    fontWeight: "600",
+    padding: "9px 10px",
+    borderRadius: "8px",
+    fontSize: "0.82rem",
+    fontWeight: "700",
     cursor: "pointer",
     border: "1px solid transparent",
-    transition: "all 0.15s ease"
+    transition: "transform 0.15s ease"
   },
   actionButtonSecondary: {
-    backgroundColor: "#202534",
-    color: "#d1d5db",
-    borderColor: "#2d3447"
+    backgroundColor: "#242229",
+    color: "#f0edf4",
+    borderColor: "#44414b"
   },
   actionButtonActive: {
     backgroundColor: "rgba(16, 185, 129, 0.15)",
@@ -982,41 +1088,41 @@ const styles = {
     color: "#10b981"
   },
   actionButtonPrimary: {
-    backgroundColor: "#202534",
-    color: "#f3f4f6",
-    borderColor: "#2d3447"
+    backgroundColor: "#242229",
+    color: "#f5f3ef",
+    borderColor: "#44414b"
   },
   emptyState: {
     textAlign: "center",
     padding: "64px 20px",
-    backgroundColor: "#161922",
+    backgroundColor: "#19181e",
     borderRadius: "12px",
-    border: "1px solid #232734"
+    border: "1px solid #2b2931"
   },
   emptyTitle: {
-    fontSize: "18px",
-    color: "#fff",
+    fontSize: "1.15rem",
+    color: "#f5f3ef",
     margin: "16px 0 6px 0"
   },
   emptySubtitle: {
-    fontSize: "14px",
-    color: "#888",
+    fontSize: "0.9rem",
+    color: "#aaa7b2",
     margin: "0 0 20px 0"
   },
   resetButton: {
-    backgroundColor: "#e50914",
-    color: "#fff",
+    backgroundColor: "#f4c96b",
+    color: "#17140d",
     border: "none",
-    padding: "8px 18px",
-    borderRadius: "6px",
-    fontSize: "13px",
+    padding: "10px 20px",
+    borderRadius: "9px",
+    fontSize: "0.9rem",
     cursor: "pointer",
-    fontWeight: "600"
+    fontWeight: "800"
   },
   modalOverlay: {
     position: "fixed",
     inset: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.75)",
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -1025,128 +1131,141 @@ const styles = {
     backdropFilter: "blur(6px)"
   },
   modalContent: {
-    backgroundColor: "#181c26",
+    backgroundColor: "#19181e",
     borderRadius: "14px",
-    maxWidth: "760px",
+    border: "1px solid #393740",
+    maxWidth: "750px",
     width: "100%",
+    padding: "28px",
     position: "relative",
-    border: "1px solid #2c3244",
-    overflow: "hidden",
+    color: "#f5f3ef",
     boxShadow: "0 20px 40px rgba(0,0,0,0.6)"
   },
   modalCloseButton: {
     position: "absolute",
     top: "16px",
     right: "16px",
-    backgroundColor: "rgba(0,0,0,0.5)",
-    border: "none",
-    color: "#fff",
+    backgroundColor: "#242229",
+    border: "1px solid #44414b",
+    color: "#f5f3ef",
     borderRadius: "50%",
-    width: "32px",
-    height: "32px",
+    width: "36px",
+    height: "36px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     cursor: "pointer",
-    zIndex: 10
+    zIndex: 2
   },
   modalLayout: {
-    display: "flex",
-    flexDirection: "row",
+    display: "grid",
+    gridTemplateColumns: "220px 1fr",
     gap: "24px",
-    padding: "24px",
-    flexWrap: "wrap"
+    alignItems: "start"
   },
   modalPoster: {
-    width: "220px",
-    borderRadius: "8px",
+    width: "100%",
+    aspectRatio: "2/3",
     objectFit: "cover",
-    aspectRatio: "2/3"
+    borderRadius: "10px",
+    border: "1px solid #393740"
   },
   modalDetails: {
-    flex: 1,
     display: "flex",
     flexDirection: "column"
   },
   modalHeaderRow: {
     display: "flex",
-    alignItems: "center",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
     gap: "12px",
-    marginBottom: "10px"
+    marginBottom: "12px"
   },
   modalTitle: {
-    fontSize: "24px",
+    fontSize: "1.5rem",
+    fontWeight: "800",
     margin: 0,
-    color: "#fff",
-    fontWeight: "800"
+    color: "#f5f3ef",
+    lineHeight: "1.2"
   },
   modalGenreTag: {
-    backgroundColor: "#2a3142",
-    color: "#cbd5e1",
-    padding: "3px 10px",
-    borderRadius: "12px",
-    fontSize: "12px"
+    backgroundColor: "#242229",
+    color: "#f4c96b",
+    padding: "4px 10px",
+    borderRadius: "6px",
+    fontSize: "0.78rem",
+    fontWeight: "700",
+    border: "1px solid #44414b",
+    whiteSpace: "nowrap"
   },
   modalMetaRow: {
     display: "flex",
     alignItems: "center",
-    gap: "20px",
-    marginBottom: "16px"
+    gap: "16px",
+    marginBottom: "16px",
+    fontSize: "0.88px",
+    color: "#aaa7b2"
   },
   modalRatingBox: {
     display: "flex",
     alignItems: "center",
-    gap: "6px"
+    gap: "6px",
+    backgroundColor: "#242229",
+    padding: "6px 12px",
+    borderRadius: "8px",
+    border: "1px solid #44414b"
   },
   modalRatingScore: {
-    fontSize: "18px",
-    fontWeight: "700",
-    color: "#fff"
+    fontSize: "1.1rem",
+    fontWeight: "800",
+    color: "#f4c96b"
   },
   modalRatingMax: {
-    fontSize: "13px",
-    color: "#888"
+    fontSize: "0.8rem",
+    color: "#aaa7b2"
   },
   modalDate: {
-    fontSize: "13px",
-    color: "#9ca3af"
+    fontSize: "0.85rem",
+    color: "#aaa7b2"
   },
   synopsisHeader: {
-    fontSize: "14px",
-    color: "#cbd5e1",
-    margin: "0 0 6px 0",
-    textTransform: "uppercase",
-    letterSpacing: "0.5px"
+    fontSize: "0.95rem",
+    fontWeight: "700",
+    color: "#f5f3ef",
+    margin: "0 0 6px 0"
   },
   modalOverview: {
-    fontSize: "14px",
+    fontSize: "0.9rem",
+    color: "#d0cdd5",
     lineHeight: "1.6",
-    color: "#9ca3af",
-    margin: "0 0 24px 0",
-    flex: 1
+    margin: "0 0 24px 0"
   },
   modalActions: {
     display: "flex",
-    gap: "12px"
+    gap: "12px",
+    marginTop: "auto"
   },
   modalActionButton: {
+    flex: 1,
     display: "flex",
     alignItems: "center",
+    justifyContent: "center",
     gap: "8px",
-    padding: "10px 18px",
-    borderRadius: "8px",
-    fontSize: "14px",
-    fontWeight: "600",
+    padding: "11px 16px",
+    borderRadius: "9px",
+    fontSize: "0.9rem",
+    fontWeight: "700",
     cursor: "pointer",
     border: "1px solid transparent"
   },
   ratingModalContent: {
-    backgroundColor: "#181c26",
+    backgroundColor: "#19181e",
     borderRadius: "14px",
-    maxWidth: "420px",
+    border: "1px solid #393740",
+    maxWidth: "440px",
     width: "100%",
     padding: "24px",
-    border: "1px solid #2c3244",
+    color: "#f5f3ef",
     boxShadow: "0 20px 40px rgba(0,0,0,0.6)"
   },
   ratingModalHeader: {
@@ -1156,13 +1275,14 @@ const styles = {
     marginBottom: "8px"
   },
   ratingModalTitle: {
-    fontSize: "18px",
-    color: "#fff",
-    margin: 0
+    fontSize: "1.2rem",
+    fontWeight: "800",
+    margin: 0,
+    color: "#f5f3ef"
   },
   ratingModalSubtitle: {
-    fontSize: "13px",
-    color: "#9ca3af",
+    fontSize: "0.85rem",
+    color: "#aaa7b2",
     margin: "0 0 20px 0"
   },
   scoreDisplayBox: {
@@ -1170,24 +1290,21 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     gap: "10px",
-    backgroundColor: "#11141c",
+    backgroundColor: "#101014",
+    border: "1px solid #393740",
+    borderRadius: "12px",
     padding: "16px",
-    borderRadius: "10px",
-    border: "1px solid #282f40",
-    marginBottom: "18px"
+    marginBottom: "20px"
   },
   scoreDisplayNumber: {
-    fontSize: "36px",
+    fontSize: "2rem",
     fontWeight: "800",
-    color: "#ffffff",
-    letterSpacing: "1px"
+    color: "#f4c96b"
   },
   scoreDisplayScale: {
-    fontSize: "16px",
-    color: "#6b7280",
-    fontWeight: "600",
-    alignSelf: "flex-end",
-    marginBottom: "4px"
+    fontSize: "1rem",
+    color: "#aaa7b2",
+    fontWeight: "600"
   },
   decimalInputContainer: {
     display: "flex",
@@ -1196,44 +1313,42 @@ const styles = {
     marginBottom: "16px"
   },
   decimalInputLabel: {
-    fontSize: "14px",
-    fontWeight: "600",
-    color: "#e5e7eb"
+    fontSize: "0.9rem",
+    fontWeight: "700",
+    color: "#f5f3ef"
   },
   decimalInput: {
     flex: 1,
-    padding: "10px 14px",
-    fontSize: "18px",
-    fontWeight: "700",
+    backgroundColor: "#101014",
+    border: "1px solid #393740",
     borderRadius: "8px",
-    backgroundColor: "#202534",
-    border: "1px solid #3b445c",
-    color: "#fff",
-    outline: "none",
-    textAlign: "center"
+    padding: "10px 14px",
+    fontSize: "1rem",
+    color: "#f5f3ef",
+    outline: "none"
   },
   sliderContainer: {
     marginBottom: "20px"
   },
   rangeSlider: {
     width: "100%",
-    accentColor: "#e50914",
-    cursor: "pointer"
+    accentColor: "#f4c96b",
+    cursor: "pointer",
+    marginBottom: "6px"
   },
   sliderTicks: {
     display: "flex",
     justifyContent: "space-between",
-    fontSize: "11px",
-    color: "#6b7280",
-    marginTop: "4px"
+    fontSize: "0.75rem",
+    color: "#85818d"
   },
   presetsWrapper: {
     marginBottom: "20px"
   },
   presetsLabel: {
     display: "block",
-    fontSize: "12px",
-    color: "#9ca3af",
+    fontSize: "0.8rem",
+    color: "#aaa7b2",
     marginBottom: "8px"
   },
   presetsGrid: {
@@ -1242,55 +1357,55 @@ const styles = {
     gap: "6px"
   },
   presetButton: {
-    padding: "6px 4px",
-    backgroundColor: "#202534",
-    border: "1px solid #2d3447",
-    color: "#cbd5e1",
+    backgroundColor: "#242229",
+    border: "1px solid #44414b",
+    color: "#f5f3ef",
     borderRadius: "6px",
-    cursor: "pointer",
-    fontSize: "12px",
-    fontWeight: "600"
+    padding: "6px 0",
+    fontSize: "0.8rem",
+    fontWeight: "700",
+    cursor: "pointer"
   },
   ratingErrorText: {
-    color: "#ef4444",
-    fontSize: "12px",
+    color: "#ffb4b4",
+    fontSize: "0.82rem",
+    marginBottom: "12px",
     margin: "0 0 12px 0"
   },
   ratingModalActions: {
     display: "flex",
-    justifyContent: "flex-end",
     gap: "10px",
-    marginTop: "8px"
-  },
-  cancelRatingButton: {
-    padding: "9px 16px",
-    backgroundColor: "transparent",
-    border: "1px solid #3b445c",
-    color: "#9ca3af",
-    borderRadius: "6px",
-    fontSize: "13px",
-    cursor: "pointer",
-    fontWeight: "600"
+    justifyContent: "flex-end"
   },
   clearRatingButton: {
-    padding: "9px 14px",
     backgroundColor: "transparent",
-    border: "1px solid #7f1d1d",
-    color: "#ef4444",
-    borderRadius: "6px",
-    fontSize: "13px",
+    border: "1px solid #6a3338",
+    color: "#ffb4b4",
+    borderRadius: "8px",
+    padding: "9px 14px",
+    fontSize: "0.85rem",
+    fontWeight: "700",
     cursor: "pointer",
-    fontWeight: "600",
     marginRight: "auto"
   },
-  saveRatingButton: {
-    padding: "9px 20px",
-    backgroundColor: "#e50914",
-    border: "none",
-    color: "#fff",
-    borderRadius: "6px",
-    fontSize: "13px",
+  cancelRatingButton: {
+    backgroundColor: "#242229",
+    border: "1px solid #44414b",
+    color: "#f0edf4",
+    borderRadius: "8px",
+    padding: "9px 14px",
+    fontSize: "0.85rem",
     fontWeight: "700",
+    cursor: "pointer"
+  },
+  saveRatingButton: {
+    backgroundColor: "#f4c96b",
+    border: "none",
+    color: "#17140d",
+    borderRadius: "8px",
+    padding: "9px 20px",
+    fontSize: "0.85rem",
+    fontWeight: "800",
     cursor: "pointer"
   }
 };
