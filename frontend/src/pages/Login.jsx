@@ -28,7 +28,7 @@ export default function Login() {
     e.preventDefault();
     setError("");
     try {
-      const res = await api.post("/auth/login", { email, password });
+      const res = await api.post("/auth/login", { username, password });
       localStorage.setItem("pantheon_token", res.data.token);
       navigate("/home");
     } catch (err) {
