@@ -5,6 +5,7 @@ import Login from "./pages/Login";
 import Home from "./pages/Home";
 import NewAccount from "./pages/NewAccount";
 import Search from "./pages/Search";
+import Profile from "./pages/Profile";
 
 export default function App() {
   return (
@@ -13,6 +14,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/newaccount" element={<NewAccount />} />
         <Route path="/search" element={<Search />} />
+        <Route path="/profile" element={<Profile />} />
 
         <Route
           path="/home"

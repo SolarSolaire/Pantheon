@@ -1,8 +1,7 @@
 import React from 'react';
-import {Navigate} from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
+import { isAuthenticated } from '../utils/auth';
 
-// gets the current session token and navigates to the login page if it exists
-export default function ProtectedRoute({children}) {
-    const token = localStorage.getItem('pantheon_token');
-    return token ? children : <Navigate to="/login" replace />
+export default function ProtectedRoute({ children }) {
+    return isAuthenticated() ? children : <Navigate to="/login" replace />;
 }
