@@ -1,15 +1,31 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  Bookmark,
+  Calendar,
+  Check,
+  Info,
+  Star,
+  X
+} from "lucide-react";
 import { clearAuthentication, isAuthenticated } from "../utils/auth";
+import { homeStyles as styles, movieCardStyles } from "../sharedStyles.jsx";
 
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 const API_URL = "https://api.themoviedb.org/3";
 const IMAGE_URL = "https://image.tmdb.org/t/p/w500";
-const BACKDROP_URL = "https://image.tmdb.org/t/p/w1280";
+
+
 
 export default function Home() {
   const navigate = useNavigate();
   const [movies, setMovies] = useState([]);
+  const [watchlist, setWatchlist] = useState({});
+  const [userRatings, setUserRatings] = useState({});
+  const [selectedMovie, setSelectedMovie] = useState(null);
+  const [activeRatingModal, setActiveRatingModal] = useState(null);
+  const [ratingInput, setRatingInput] = useState("");
+  const [ratingError, setRatingError] = useState("");
   const [search, setSearch] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
@@ -142,476 +158,56 @@ export default function Home() {
     window.location.assign(`/Search?query=${encodeURIComponent(movie.title)}`);
   }
 
-  const featuredMovie = movies.find((movie) => movie.backdrop_path);
+  function handleMovieSelect(movie) {
+    setSelectedMovie(movie);
+  }
+
+  function handleToggleWatchlist(movie) {
+    setWatchlist((previous) => ({
+      ...previous,
+      [movie.id]: !previous[movie.id]
+    }));
+  }
+
+  function handleOpenRatingModal(movie) {
+    setActiveRatingModal(movie);
+    setRatingInput(userRatings[movie.id] ? String(userRatings[movie.id]) : "8.0");
+    setRatingError("");
+  }
+
+  function handleSaveRating(event) {
+    event.preventDefault();
+    const value = parseFloat(ratingInput);
+    if (Number.isNaN(value) || value < 0 || value > 10) {
+      setRatingError("Please enter a rating between 0.0 and 10.0");
+      return;
+    }
+
+    setUserRatings((previous) => ({
+      ...previous,
+      [activeRatingModal.id]: value.toFixed(1)
+    }));
+    setActiveRatingModal(null);
+  }
+
+  function handleClearRating() {
+    setUserRatings((previous) => {
+      const updatedRatings = { ...previous };
+      delete updatedRatings[activeRatingModal.id];
+      return updatedRatings;
+    });
+    setActiveRatingModal(null);
+  }
 
   return (
-    <div className="pantheon-app">
-
-      <style>{`
-        /* Global reset and page theme */
-        * {
-          box-sizing: border-box;
-        }
-
-        html,
-        body,
-        #root {
-          width: 100%;
-          min-height: 100%;
-          margin: 0;
-          padding: 0;
-          border: 0;
-        }
-
-        body {
-          background: #101014;
-        }
-
-        .pantheon-app {
-          display: flow-root;
-          width: 100%;
-          min-height: 100vh;
-          margin: 0;
-          padding: 0;
-          border: 0;
-          background: #101014;
-          color: #f5f3ef;
-          font-family: Inter, ui-sans-serif, system-ui, -apple-system,
-            BlinkMacSystemFont, "Segoe UI", sans-serif;
-        }
-
-        /* Header and search */
-        .navbar {
-          position: sticky;
-          top: 0;
-          z-index: 10;
-          display: flex;
-          align-items: center;
-          gap: 32px;
-          padding: 18px clamp(20px, 5vw, 72px);
-          border-bottom: 1px solid #29282e;
-          background: rgba(16, 16, 20, 0.94);
-          backdrop-filter: blur(14px);
-        }
-
-        .logo {
-          color: #f4c96b;
-          font-size: 1.35rem;
-          font-weight: 800;
-          letter-spacing: 0.04em;
-          text-decoration: none;
-          white-space: nowrap;
-        }
-
-        .navbar-actions {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          margin-left: auto;
-        }
-
-        .search-wrap {
-          position: relative;
-          width: min(330px, 32vw);
-        }
-
-        .search-box {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          width: 100%;
-          padding: 0 13px;
-          border: 1px solid #393740;
-          border-radius: 10px;
-          background: #1b1a20;
-          color: #aaa7b2;
-        }
-
-        .search-box input {
-          width: 100%;
-          min-width: 0;
-          padding: 12px 0;
-          border: 0;
-          outline: 0;
-          background: transparent;
-          color: #f5f3ef;
-          font: inherit;
-        }
-
-        .search-box input::placeholder {
-          color: #85818d;
-        }
-
-        .suggestions-dropdown {
-          position: absolute;
-          top: calc(100% + 8px);
-          right: 0;
-          left: 0;
-          z-index: 30;
-          overflow: hidden;
-          border: 1px solid #393740;
-          border-radius: 10px;
-          background: #1b1a20;
-          box-shadow: 0 14px 32px #0008;
-        }
-
-        .suggestion-item {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          width: 100%;
-          padding: 10px 12px;
-          border: 0;
-          border-bottom: 1px solid #302e36;
-          background: transparent;
-          color: #f5f3ef;
-          text-align: left;
-          cursor: pointer;
-        }
-
-        .suggestion-item:last-child {
-          border-bottom: 0;
-        }
-
-        .suggestion-item:hover,
-        .suggestion-item:focus-visible {
-          background: #292730;
-        }
-
-        .suggestion-poster {
-          flex: 0 0 34px;
-          width: 34px;
-          height: 48px;
-          border-radius: 4px;
-          background: #302e36;
-          object-fit: cover;
-        }
-
-        .suggestion-title,
-        .suggestion-year {
-          display: block;
-        }
-
-        .suggestion-title {
-          font-size: 0.9rem;
-          font-weight: 700;
-        }
-
-        .suggestion-year {
-          margin-top: 3px;
-          color: #aaa7b2;
-          font-size: 0.78rem;
-        }
-
-        .suggestion-status {
-          padding: 13px;
-          color: #aaa7b2;
-          font-size: 0.86rem;
-        }
-
-        .search-submit,
-        .logout-btn {
-          padding: 11px 15px;
-          border: 1px solid transparent;
-          border-radius: 9px;
-          font: inherit;
-          font-weight: 700;
-          white-space: nowrap;
-          cursor: pointer;
-          transition: transform 0.15s ease;
-        }
-
-        .search-submit,
-        .login-btn {
-          background: #f4c96b;
-          color: #17140d;
-        }
-
-        .logout-btn {
-          border-color: #44414b;
-          background: #242229;
-          color: #f0edf4;
-        }
-
-        .search-submit:hover,
-        .logout-btn:hover {
-          transform: translateY(-1px);
-        }
-
-        /* Featured movie hero */
-        .hero {
-          display: flex;
-          align-items: center;
-          min-height: clamp(420px, 53vw, 610px);
-          padding: 72px clamp(24px, 8vw, 120px);
-          border-bottom: 1px solid #29282e;
-          background-position: center 28%;
-          background-size: cover;
-        }
-
-        .hero-content {
-          max-width: 680px;
-        }
-
-        .hero-kicker {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          padding: 7px 10px;
-          border: 1px solid #f4c96b55;
-          border-radius: 999px;
-          background: #10101499;
-          color: #f4c96b;
-          font-size: 0.72rem;
-          font-weight: 800;
-          letter-spacing: 0.12em;
-          text-transform: uppercase;
-        }
-
-        .hero h1 {
-          max-width: 680px;
-          margin: 14px 0;
-          font-size: clamp(2.5rem, 5vw, 4.8rem);
-          line-height: 1.04;
-          letter-spacing: -0.04em;
-          text-wrap: balance;
-        }
-
-        .hero-meta,
-        .movie-meta {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          color: #aaa7b2;
-          font-size: 0.88rem;
-        }
-
-        .gold,
-        .movie-meta .movie-score {
-          color: #f4c96b;
-        }
-
-        .hero p {
-          max-width: 580px;
-          color: #d0cdd5;
-          line-height: 1.7;
-        }
-
-        .hero-actions {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 12px;
-          margin-top: 24px;
-        }
-
-        .hero-cta {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          min-height: 44px;
-          padding: 0 18px;
-          border: 1px solid #f4c96b;
-          border-radius: 9px;
-          background: #f4c96b;
-          color: #17140d;
-          font: inherit;
-          font-weight: 800;
-          text-decoration: none;
-          cursor: pointer;
-        }
-
-        .hero-cta.secondary {
-          border-color: #ffffff55;
-          background: #17161bb8;
-          color: #f5f3ef;
-        }
-
-        /* Movie collection */
-        .main-content {
-          width: min(1440px, 100%);
-          margin: 0 auto;
-          padding: 42px clamp(20px, 5vw, 72px) 70px;
-        }
-
-        .content-intro {
-          display: flex;
-          align-items: end;
-          justify-content: space-between;
-          gap: 20px;
-          margin: 0 0 26px;
-        }
-
-        .content-intro h2 {
-          margin: 8px 0;
-          font-size: clamp(1.7rem, 3vw, 2.35rem);
-          letter-spacing: -0.04em;
-        }
-
-        .movie-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
-          gap: 24px 18px;
-        }
-
-        .movie-card {
-          min-width: 0;
-          overflow: hidden;
-          border: 1px solid #2b2931;
-          border-radius: 13px;
-          background: #19181e;
-          transition: transform 0.2s ease, border-color 0.2s ease;
-        }
-
-        .movie-card:hover {
-          transform: translateY(-4px);
-          border-color: #6a5935;
-        }
-
-        .poster-wrap {
-          position: relative;
-          overflow: hidden;
-          aspect-ratio: 2 / 3;
-          background: #25232b;
-        }
-
-        .poster {
-          display: block;
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-
-        .poster-placeholder {
-          display: grid;
-          place-items: center;
-          height: 100%;
-          padding: 12px;
-          color: #aaa7b2;
-          text-align: center;
-        }
-
-        .rating-badge {
-          position: absolute;
-          top: 10px;
-          left: 10px;
-          padding: 6px 8px;
-          border: 1px solid #ffffff25;
-          border-radius: 7px;
-          background: #101014dc;
-          color: #f4c96b;
-          font-size: 0.82rem;
-          font-weight: 800;
-        }
-
-        .movie-info {
-          padding: 14px;
-        }
-
-        .movie-info h3 {
-          display: -webkit-box;
-          overflow: hidden;
-          min-height: 2.8em;
-          margin: 0 0 10px;
-          font-size: 1rem;
-          line-height: 1.4;
-          -webkit-box-orient: vertical;
-          -webkit-line-clamp: 2;
-        }
-
-        .movie-meta {
-          justify-content: space-between;
-          font-size: 0.82rem;
-        }
-
-        /* Loading and error messages */
-        .status-message {
-          padding: 28px;
-          border: 1px solid #302e36;
-          border-radius: 12px;
-          background: #19181e;
-          color: #c7c3ce;
-          text-align: center;
-        }
-
-        .status-message.error {
-          border-color: #6a3338;
-          color: #ffb4b4;
-        }
-
-        /* Keyboard accessibility */
-        button:focus-visible,
-        a:focus-visible,
-        input:focus-visible {
-          outline: 2px solid #f4c96b;
-          outline-offset: 3px;
-        }
-
-        /* Responsive layout */
-        @media (max-width: 850px) {
-          .navbar {
-            flex-wrap: wrap;
-            gap: 16px;
-          }
-
-          .navbar-actions {
-            margin-left: auto;
-          }
-
-          .search-wrap {
-            width: min(300px, 42vw);
-          }
-        }
-
-        @media (max-width: 560px) {
-          .navbar {
-            padding: 15px 16px;
-          }
-
-          .navbar-actions {
-            width: 100%;
-          }
-
-          .search-wrap {
-            flex: 1;
-            width: auto;
-            min-width: 0;
-          }
-
-          .search-box {
-            width: 100%;
-          }
-
-          .search-submit,
-          .logout-btn {
-            padding: 10px 11px;
-          }
-
-          .hero {
-            min-height: 360px;
-            padding: 42px 22px;
-          }
-
-          .main-content {
-            padding: 32px 16px 50px;
-          }
-
-          .movie-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 14px;
-          }
-
-          .movie-info {
-            padding: 11px;
-          }
-        }
-      `}</style>
-      <header className="navbar">
-        <a className="logo" href="#">
+    <div>
+      <header style={styles.navBar}>
+        <a style={styles.navBrand} href="#">
           <span>Pantheon</span>
         </a>
-        <div className="navbar-actions">
-          <div className="search-wrap">
-            <form className="search-box" onSubmit={handleSearchSubmit}>
+        <div style={styles.navActions}>
+          <div style={styles.searchWrap}>
+            <form style={styles.searchBox} onSubmit={handleSearchSubmit}>
               <span aria-hidden="true">⌕</span>
               <input
                 type="search"
@@ -621,6 +217,7 @@ export default function Home() {
                 autoComplete="off"
                 aria-expanded={dropdownOpen && Boolean(search.trim())}
                 aria-controls="movie-search-suggestions"
+                style={styles.searchInput}
                 onFocus={() => setDropdownOpen(true)}
                 onChange={(event) => {
                   setSearch(event.target.value);
@@ -631,146 +228,458 @@ export default function Home() {
                 }}
               />
               {search && (
-                <button type="button" onClick={() => { setSearch(""); setDropdownOpen(false); }} aria-label="Clear search">
+                <button
+                  type="button"
+                  style={styles.clearButton}
+                  onClick={() => {
+                    setSearch("");
+                    setDropdownOpen(false);
+                  }}
+                  aria-label="Clear search"
+                >
                   ×
                 </button>
               )}
             </form>
             {dropdownOpen && search.trim() && (
-              <div className="suggestions-dropdown" id="movie-search-suggestions" role="listbox" aria-label="Suggested movies">
+              <div
+                style={styles.suggestionsDropdown}
+                id="movie-search-suggestions"
+                role="listbox"
+                aria-label="Suggested movies"
+              >
                 {suggestionsLoading ? (
-                  <div className="suggestion-status">Searching movies…</div>
+                  <div style={styles.suggestionStatus}>Searching movies…</div>
                 ) : suggestions.length ? (
                   suggestions.map((movie) => (
                     <button
                       type="button"
-                      className="suggestion-item"
+                      className="home-suggestion-item"
+                      style={styles.suggestionItem}
                       role="option"
                       aria-selected="false"
                       key={movie.id}
                       onClick={() => handleSuggestionSelect(movie)}
                     >
                       {movie.poster_path ? (
-                        <img className="suggestion-poster" src={`${IMAGE_URL}${movie.poster_path}`} alt="" />
+                        <img
+                          style={styles.suggestionPoster}
+                          src={`${IMAGE_URL}${movie.poster_path}`}
+                          alt=""
+                        />
                       ) : (
-                        <span className="suggestion-poster" aria-hidden="true" />
+                        <span style={styles.suggestionPoster} aria-hidden="true" />
                       )}
-                      <span>
-                        <span className="suggestion-title">{movie.title}</span>
-                        <span className="suggestion-year">{movie.release_date?.slice(0, 4) || "Release year unknown"}</span>
+                      <span style={styles.suggestionText}>
+                        <span style={styles.suggestionTitle}>{movie.title}</span>
+                        <span style={styles.suggestionYear}>
+                          {movie.release_date?.slice(0, 4) || "Release year unknown"}
+                        </span>
                       </span>
                     </button>
                   ))
                 ) : (
-                  <div className="suggestion-status">No matching movies found.</div>
+                  <div style={styles.suggestionStatus}>No matching movies found.</div>
                 )}
               </div>
             )}
           </div>
-          <button type="button" className="search-submit" onClick={handleSearchSubmit}>
+          <button type="button" style={styles.searchSubmit} onClick={handleSearchSubmit}>
             Enter
           </button>
-          <button type="button" className="logout-btn" onClick={handleAuthAction}>
+          <button type="button" style={styles.logoutBtn} onClick={handleAuthAction}>
             Logout
           </button>
         </div>
       </header>
 
-      {featuredMovie && (
-        <section
-          id="featured"
-          className="hero"
-          style={{
-            backgroundImage: `linear-gradient(90deg, #101014 0%, #101014df 45%, #10101455 100%), linear-gradient(0deg, #101014, transparent 65%), url(${BACKDROP_URL}${featuredMovie.backdrop_path})`,
-          }}
-        >
-          <div className="hero-content">
-            <span className="hero-kicker">✦ Featured film</span>
-            <h1>{featuredMovie.title}</h1>
-
-            <div className="hero-meta">
-              <span className="gold">
-                ★ {featuredMovie.vote_average?.toFixed(1)}
-              </span>
-              <span>
-                {featuredMovie.release_date?.slice(0, 4) || "Coming soon"}
-              </span>
-              <span>TMDB</span>
-            </div>
-
-            <p>
-              {featuredMovie.overview ||
-                "Discover your next favorite movie."}
-            </p>
-            <div className="hero-actions">
-              <a className="hero-cta" href={`/Search?query=${encodeURIComponent(featuredMovie.title)}`}>Explore film <span aria-hidden="true">↗</span></a>
-              <a className="hero-cta secondary" href="#movies">Browse popular movies</a>
-            </div>
-          </div>
-        </section>
-      )}
-
-      <main className="main-content">
-
+      <main style={styles.container}>
         <section id="movies">
-          <div className="content-intro">
-            <div>
-              <h2>Featured Movies</h2>
-            </div>
-          </div>
+          <h2 style={styles.sectionTitle}>Featured Movies</h2>
 
-          {loading && <div className="status-message">Loading movies...</div>}
+          {loading && <div style={styles.statusMessage}>Loading movies...</div>}
 
           {!loading && error && (
-            <div className="status-message error">{error}</div>
+            <div style={{ ...styles.statusMessage, ...styles.errorMessage }}>{error}</div>
           )}
 
           {!loading && !error && movies.length === 0 && (
-            <div className="status-message">
-              No movies found. Try another search.
-            </div>
+            <div style={styles.statusMessage}>No movies found. Try another search.</div>
           )}
 
           {!loading && !error && movies.length > 0 && (
-            <div className="movie-grid">
-              {movies.map((movie) => (
-                  <article className="movie-card" key={movie.id}>
-                    <div className="poster-wrap">
+            <div style={styles.grid}>
+              {movies.map((movie) => {
+                const inWatchlist = !!watchlist[movie.id];
+                const userRating = userRatings[movie.id];
+                const releaseYear = movie.release_date
+                  ? movie.release_date.split("-")[0]
+                  : "N/A";
+
+                return (
+                  <article key={movie.id} style={movieCardStyles.movieCard}>
+                    {/* Poster Thumbnail */}
+                    <div
+                      style={movieCardStyles.posterContainer}
+                      onClick={() => handleMovieSelect(movie)}
+                    >
                       {movie.poster_path ? (
                         <img
-                          className="poster"
                           src={`${IMAGE_URL}${movie.poster_path}`}
-                          alt={`${movie.title} poster`}
+                          alt={movie.title}
+                          style={movieCardStyles.posterImage}
                           loading="lazy"
+                          onError={(event) => {
+                            event.currentTarget.onerror = null;
+                            event.currentTarget.src =
+                              "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=500&auto=format&fit=crop&q=60";
+                          }}
                         />
                       ) : (
-                        <div className="poster-placeholder">
-                          Poster unavailable
+                        <div style={styles.posterPlaceholder}>Poster unavailable</div>
+                      )}
+                      <div style={movieCardStyles.posterOverlay}>
+                        <span style={movieCardStyles.quickViewText}>
+                          <Info size={14} /> View Details
+                        </span>
+                      </div>
+
+                      {/* Score badge */}
+                      <div style={movieCardStyles.ratingBadge}>
+                        <Star
+                          size={13}
+                          fill="#f4c96b"
+                          color="#f4c96b"
+                        />
+                        <span>{movie.vote_average?.toFixed(1) ?? "N/A"}</span>
+                      </div>
+
+                      {/* Genre pill badge */}
+                      {movie.genre && (
+                        <div style={movieCardStyles.genreBadge}>{movie.genre}</div>
+                      )}
+                    </div>
+
+                    {/* Card Content */}
+                    <div style={movieCardStyles.cardBody}>
+                      <div style={movieCardStyles.cardHeader}>
+                        <h2
+                          style={movieCardStyles.movieTitle}
+                          title={movie.title}
+                          onClick={() => handleMovieSelect(movie)}
+                        >
+                          {movie.title}
+                        </h2>
+                        <div style={movieCardStyles.movieMeta}>
+                          <Calendar size={13} color="#85818d" />
+                          <span>{releaseYear}</span>
+                        </div>
+                      </div>
+
+                      <p style={movieCardStyles.overviewText}>{movie.overview}</p>
+
+                      {/* User Rating Indicator (if rated) */}
+                      {userRating && (
+                        <div style={movieCardStyles.userRatedBar}>
+                          <Star size={13} fill="#f4c96b" color="#f4c96b" />
+                          <span>
+                            Your rating: <strong>{userRating} / 10</strong>
+                          </span>
                         </div>
                       )}
 
-                      <span className="rating-badge">
-                        ★ {movie.vote_average?.toFixed(1) ?? "N/A"}
-                      </span>
+                      {/* Action Buttons */}
+                      <div style={movieCardStyles.cardActions}>
+                        <button
+                          onClick={() => handleToggleWatchlist(movie)}
+                          style={{
+                            ...movieCardStyles.actionButton,
+                            ...(inWatchlist
+                              ? movieCardStyles.actionButtonActive
+                              : movieCardStyles.actionButtonSecondary)
+                          }}
+                          title={
+                            inWatchlist
+                              ? "Remove from watchlist"
+                              : "Add to watchlist"
+                          }
+                        >
+                          {inWatchlist ? (
+                            <>
+                              <Check size={14} color="#10b981" />
+                              <span style={{ color: "#10b981" }}>In Watchlist</span>
+                            </>
+                          ) : (
+                            <>
+                              <Bookmark size={14} />
+                              <span>Watchlist</span>
+                            </>
+                          )}
+                        </button>
 
-                    </div>
-
-                    <div className="movie-info">
-                      <h3>{movie.title}</h3>
-
-                      <div className="movie-meta">
-                        <span>{movie.release_date?.slice(0, 4) || "Year unknown"}</span>
-                        <span className="movie-score">★ {movie.vote_average?.toFixed(1) ?? "N/A"}</span>
+                        <button
+                          onClick={() => handleOpenRatingModal(movie)}
+                          style={{
+                            ...movieCardStyles.actionButton,
+                            ...movieCardStyles.actionButtonPrimary
+                          }}
+                        >
+                          <Star
+                            size={14}
+                            fill={userRating ? "#f4c96b" : "none"}
+                            color="#f4c96b"
+                          />
+                          <span>{userRating ? `${userRating} ★` : "Rate"}</span>
+                        </button>
                       </div>
-
                     </div>
                   </article>
-                )
-              )}
+                );
+              })}
             </div>
           )}
-        </section>        
+        </section>
       </main>
+
+      {/* Movie Details Modal */}
+      {selectedMovie && (
+        <div
+          style={searchStyles.modalOverlay}
+          onClick={() => setSelectedMovie(null)}
+        >
+          <div
+            style={searchStyles.modalContent}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              style={searchStyles.modalCloseButton}
+              onClick={() => setSelectedMovie(null)}
+              aria-label="Close movie details"
+            >
+              <X size={20} />
+            </button>
+
+            <div style={searchStyles.modalLayout}>
+              {selectedMovie.poster_path && (
+                <img
+                  src={`${IMAGE_URL}${selectedMovie.poster_path}`}
+                  alt={selectedMovie.title}
+                  style={searchStyles.modalPoster}
+                />
+              )}
+              <div style={searchStyles.modalDetails}>
+                <div style={searchStyles.modalHeaderRow}>
+                  <h2 style={searchStyles.modalTitle}>{selectedMovie.title}</h2>
+                  {selectedMovie.genre && (
+                    <span style={searchStyles.modalGenreTag}>
+                      {selectedMovie.genre}
+                    </span>
+                  )}
+                </div>
+
+                <div style={searchStyles.modalMetaRow}>
+                  <div style={searchStyles.modalRatingBox}>
+                    <Star size={18} fill="#f4c96b" color="#f4c96b" />
+                    <span style={searchStyles.modalRatingScore}>
+                      {selectedMovie.vote_average?.toFixed(1) ?? "N/A"}
+                    </span>
+                    <span style={searchStyles.modalRatingMax}>/ 10</span>
+                  </div>
+                  <span style={searchStyles.modalDate}>
+                    Release Date: {selectedMovie.release_date || "Unknown"}
+                  </span>
+                </div>
+
+                <h4 style={searchStyles.synopsisHeader}>Synopsis</h4>
+                <p style={searchStyles.modalOverview}>
+                  {selectedMovie.overview || "No overview available."}
+                </p>
+
+                <div style={searchStyles.modalActions}>
+                  <button
+                    onClick={() => handleToggleWatchlist(selectedMovie)}
+                    style={{
+                      ...searchStyles.modalActionButton,
+                      ...(watchlist[selectedMovie.id]
+                        ? movieCardStyles.actionButtonActive
+                        : movieCardStyles.actionButtonSecondary)
+                    }}
+                  >
+                    {watchlist[selectedMovie.id] ? (
+                      <>
+                        <Check size={16} color="#10b981" />
+                        <span style={{ color: "#10b981" }}>
+                          Saved in Watchlist
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Bookmark size={16} />
+                        <span>Add to Watchlist</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={() => handleOpenRatingModal(selectedMovie)}
+                    style={{
+                      ...searchStyles.modalActionButton,
+                      ...movieCardStyles.actionButtonPrimary
+                    }}
+                  >
+                    <Star
+                      size={16}
+                      fill={userRatings[selectedMovie.id] ? "#f4c96b" : "none"}
+                      color="#f4c96b"
+                    />
+                    <span>
+                      {userRatings[selectedMovie.id]
+                        ? `Your Rating: ${userRatings[selectedMovie.id]}/10`
+                        : "Rate this Movie"}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Decimal Rating Modal */}
+      {activeRatingModal && (
+        <div
+          style={searchStyles.modalOverlay}
+          onClick={() => setActiveRatingModal(null)}
+        >
+          <div
+            style={searchStyles.ratingModalContent}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div style={searchStyles.ratingModalHeader}>
+              <h3 style={searchStyles.ratingModalTitle}>
+                Rate "{activeRatingModal.title}"
+              </h3>
+              <button
+                style={searchStyles.modalCloseButton}
+                onClick={() => setActiveRatingModal(null)}
+                aria-label="Close rating dialog"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <p style={searchStyles.ratingModalSubtitle}>
+              Enter a decimal rating from 0.0 to 10.0 (e.g. 7.3 or 8.8):
+            </p>
+
+            <form onSubmit={handleSaveRating}>
+              <div style={searchStyles.scoreDisplayBox}>
+                <Star size={32} fill="#f4c96b" color="#f4c96b" />
+                <span style={searchStyles.scoreDisplayNumber}>
+                  {(() => {
+                    const parsedRating = parseFloat(ratingInput);
+                    return !Number.isNaN(parsedRating) &&
+                      parsedRating >= 0 &&
+                      parsedRating <= 10
+                      ? parsedRating.toFixed(1)
+                      : "--";
+                  })()}
+                </span>
+                <span style={searchStyles.scoreDisplayScale}>/ 10.0</span>
+              </div>
+
+              <div style={searchStyles.decimalInputContainer}>
+                <label style={searchStyles.decimalInputLabel}>Rating:</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="10"
+                  value={ratingInput}
+                  onChange={(event) => {
+                    setRatingInput(event.target.value);
+                    setRatingError("");
+                  }}
+                  placeholder="e.g. 7.3"
+                  autoFocus
+                  style={searchStyles.decimalInput}
+                />
+              </div>
+
+              <div style={searchStyles.sliderContainer}>
+                <input
+                  type="range"
+                  min="0"
+                  max="10"
+                  step="0.1"
+                  value={(() => {
+                    const parsedRating = parseFloat(ratingInput);
+                    return Number.isNaN(parsedRating)
+                      ? 7
+                      : Math.min(10, Math.max(0, parsedRating));
+                  })()}
+                  onChange={(event) => {
+                    setRatingInput(parseFloat(event.target.value).toFixed(1));
+                    setRatingError("");
+                  }}
+                  style={searchStyles.rangeSlider}
+                />
+                <div style={searchStyles.sliderTicks}>
+                  <span>0.0</span>
+                  <span>2.5</span>
+                  <span>5.0</span>
+                  <span>7.5</span>
+                  <span>10.0</span>
+                </div>
+              </div>
+
+              <div style={searchStyles.presetsWrapper}>
+                <span style={searchStyles.presetsLabel}>Quick picks:</span>
+                <div style={searchStyles.presetsGrid}>
+                  {[6.5, 7.3, 7.8, 8.2, 8.8, 9.4].map((preset) => (
+                    <button
+                      type="button"
+                      key={preset}
+                      onClick={() => {
+                        setRatingInput(preset.toFixed(1));
+                        setRatingError("");
+                      }}
+                      style={searchStyles.presetButton}
+                    >
+                      {preset.toFixed(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {ratingError && (
+                <p style={searchStyles.ratingErrorText}>{ratingError}</p>
+              )}
+
+              <div style={searchStyles.ratingModalActions}>
+                {userRatings[activeRatingModal.id] && (
+                  <button
+                    type="button"
+                    onClick={handleClearRating}
+                    style={searchStyles.clearRatingButton}
+                  >
+                    Remove
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setActiveRatingModal(null)}
+                  style={searchStyles.cancelRatingButton}
+                >
+                  Cancel
+                </button>
+                <button type="submit" style={searchStyles.saveRatingButton}>
+                  Save Rating
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
