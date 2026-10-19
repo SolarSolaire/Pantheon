@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { searchStyles as styles, movieCardStyles } from "../sharedStyles.jsx";
 import {
   Search as SearchIcon,
   Star,
@@ -258,19 +259,6 @@ export default function Search() {
 
   return (
     <div style={styles.page}>
-      <style>{`
-        html, body, #root {
-          margin: 0;
-          padding: 0;
-          width: 100%;
-          min-height: 100vh;
-          background-color: #101014;
-        }
-        * {
-          box-sizing: border-box;
-        }
-      `}</style>
-
       {/* Top Navigation Bar */}
       <header style={styles.navBar}>
         <a className="logo" href="#" onClick={(e) => { e.preventDefault(); navigate("/home"); }} style={styles.navBrand}>
@@ -401,72 +389,72 @@ export default function Search() {
                 : "N/A";
 
               return (
-                <article key={movie.id} style={styles.card}>
+                <article key={movie.id} style={movieCardStyles.movieCard}>
                   {/* Poster Thumbnail */}
                   <div
-                    style={styles.posterContainer}
+                    style={movieCardStyles.posterContainer}
                     onClick={() => setSelectedMovie(movie)}
                   >
                     <img
                       src={movie.poster_path}
                       alt={movie.title}
-                      style={styles.posterImage}
+                      style={movieCardStyles.posterImage}
                       onError={(e) => {
                         e.target.onerror = null;
                         e.target.src = "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=500&auto=format&fit=crop&q=60";
                       }}
                     />
-                    <div style={styles.posterOverlay}>
-                      <span style={styles.quickViewText}>
+                    <div style={movieCardStyles.posterOverlay}>
+                      <span style={movieCardStyles.quickViewText}>
                         <Info size={14} /> View Details
                       </span>
                     </div>
 
                     {/* Score badge */}
-                    <div style={styles.ratingBadge}>
+                    <div style={movieCardStyles.ratingBadge}>
                       <Star size={13} fill="#f4c96b" color="#f4c96b" />
                       <span>{movie.vote_average.toFixed(1)}</span>
                     </div>
 
                     {/* Genre pill badge */}
-                    <div style={styles.genreBadge}>{movie.genre}</div>
+                    <div style={movieCardStyles.genreBadge}>{movie.genre}</div>
                   </div>
 
                   {/* Card Content */}
-                  <div style={styles.cardBody}>
-                    <div style={styles.cardHeader}>
+                  <div style={movieCardStyles.cardBody}>
+                    <div style={movieCardStyles.cardHeader}>
                       <h2
-                        style={styles.movieTitle}
+                        style={movieCardStyles.movieTitle}
                         title={movie.title}
                         onClick={() => setSelectedMovie(movie)}
                       >
                         {movie.title}
                       </h2>
-                      <div style={styles.movieMeta}>
+                      <div style={movieCardStyles.movieMeta}>
                         <Calendar size={13} color="#85818d" />
                         <span>{releaseYear}</span>
                       </div>
                     </div>
 
-                    <p style={styles.overviewText}>
+                    <p style={movieCardStyles.overviewText}>
                       {movie.overview}
                     </p>
 
                     {/* User Rating Indicator (if rated) */}
                     {userRating && (
-                      <div style={styles.userRatedBar}>
+                      <div style={movieCardStyles.userRatedBar}>
                         <Star size={13} fill="#f4c96b" color="#f4c96b" />
                         <span>Your rating: <strong>{userRating} / 10</strong></span>
                       </div>
                     )}
 
                     {/* Action Buttons */}
-                    <div style={styles.cardActions}>
+                    <div style={movieCardStyles.cardActions}>
                       <button
                         onClick={() => handleToggleWatchlist(movie)}
                         style={{
-                          ...styles.actionButton,
-                          ...(inWatchlist ? styles.actionButtonActive : styles.actionButtonSecondary)
+                          ...movieCardStyles.actionButton,
+                          ...(inWatchlist ? movieCardStyles.actionButtonActive : movieCardStyles.actionButtonSecondary)
                         }}
                         title={inWatchlist ? "Remove from watchlist" : "Add to watchlist"}
                       >
@@ -486,8 +474,8 @@ export default function Search() {
                       <button
                         onClick={() => handleOpenRatingModal(movie)}
                         style={{
-                          ...styles.actionButton,
-                          ...styles.actionButtonPrimary
+                          ...movieCardStyles.actionButton,
+                          ...movieCardStyles.actionButtonPrimary
                         }}
                       >
                         <Star size={14} fill={userRating ? "#f4c96b" : "none"} color="#f4c96b" />
@@ -546,7 +534,7 @@ export default function Search() {
                     onClick={() => handleToggleWatchlist(selectedMovie)}
                     style={{
                       ...styles.modalActionButton,
-                      ...(watchlist[selectedMovie.id] ? styles.actionButtonActive : styles.actionButtonSecondary)
+                      ...(watchlist[selectedMovie.id] ? movieCardStyles.actionButtonActive : movieCardStyles.actionButtonSecondary)
                     }}
                   >
                     {watchlist[selectedMovie.id] ? (
@@ -568,7 +556,7 @@ export default function Search() {
                     }}
                     style={{
                       ...styles.modalActionButton,
-                      ...styles.actionButtonPrimary
+                      ...movieCardStyles.actionButtonPrimary
                     }}
                   >
                     <Star size={16} fill={userRatings[selectedMovie.id] ? "#f4c96b" : "none"} color="#f4c96b" />
@@ -720,692 +708,3 @@ export default function Search() {
 }
 
 // Styling matching Home page cinematic theme (no white borders)
-const styles = {
-  page: {
-    minHeight: "100vh",
-    backgroundColor: "#101014",
-    color: "#f5f3ef",
-    fontFamily:
-      'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
-  },
-  navBar: {
-    position: "sticky",
-    top: 0,
-    zIndex: 10,
-    height: "72px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "0 clamp(20px, 5vw, 72px)",
-    backgroundColor: "rgba(16, 16, 20, 0.94)",
-    backdropFilter: "blur(14px)",
-    borderBottom: "1px solid #29282e"
-  },
-  navBrand: {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    cursor: "pointer",
-    color: "#f4c96b",
-    fontSize: "1.35rem",
-    fontWeight: "800",
-    letterSpacing: "0.04em",
-    textDecoration: "none"
-  },
-  navActions: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px"
-  },
-  accountBtn: {
-    padding: "10px 16px",
-    border: "1px solid #44414b",
-    borderRadius: "9px",
-    fontSize: "inherit",
-    fontWeight: "700",
-    backgroundColor: "#242229",
-    color: "#f0edf4",
-    cursor: "pointer",
-    transition: "transform 0.15s ease",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center"
-  },
-  loginBtn: {
-    padding: "10px 16px",
-    border: "1px solid transparent",
-    borderRadius: "9px",
-    fontSize: "inherit",
-    fontWeight: "700",
-    backgroundColor: "#f4c96b",
-    color: "#17140d",
-    cursor: "pointer",
-    transition: "transform 0.15s ease",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center"
-  },
-  logoutBtn: {
-    padding: "10px 16px",
-    border: "1px solid transparent",
-    borderRadius: "9px",
-    fontSize: "inherit",
-    fontWeight: "700",
-    backgroundColor: "#d9534f",
-    color: "#ffffff",
-    cursor: "pointer",
-    transition: "transform 0.15s ease",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center"
-  },
-  container: {
-    maxWidth: "1440px",
-    margin: "0 auto",
-    padding: "42px clamp(20px, 5vw, 72px) 70px"
-  },
-  heroSection: {
-    textAlign: "center",
-    marginBottom: "36px"
-  },
-  heroTitle: {
-    fontSize: "clamp(2rem, 4vw, 3rem)",
-    fontWeight: "800",
-    margin: "0 0 10px 0",
-    color: "#f5f3ef",
-    letterSpacing: "-0.04em"
-  },
-  heroSubtitle: {
-    fontSize: "1rem",
-    color: "#aaa7b2",
-    margin: "0 0 28px 0"
-  },
-  searchBarWrapper: {
-    position: "relative",
-    maxWidth: "680px",
-    margin: "0 auto 28px auto"
-  },
-  searchIcon: {
-    position: "absolute",
-    left: "18px",
-    top: "50%",
-    transform: "translateY(-50%)",
-    pointerEvents: "none"
-  },
-  searchInput: {
-    width: "100%",
-    boxSizing: "border-box",
-    padding: "14px 44px 14px 50px",
-    fontSize: "16px",
-    backgroundColor: "#1b1a20",
-    border: "1px solid #393740",
-    borderRadius: "30px",
-    color: "#f5f3ef",
-    outline: "none",
-    boxShadow: "0 4px 14px rgba(0, 0, 0, 0.4)"
-  },
-  clearButton: {
-    position: "absolute",
-    right: "16px",
-    top: "50%",
-    transform: "translateY(-50%)",
-    background: "transparent",
-    border: "none",
-    color: "#85818d",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    padding: "4px"
-  },
-  filterBar: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: "16px",
-    maxWidth: "1050px",
-    margin: "0 auto"
-  },
-  genrePills: {
-    display: "flex",
-    gap: "8px",
-    flexWrap: "wrap"
-  },
-  genrePill: {
-    backgroundColor: "#1b1a20",
-    color: "#aaa7b2",
-    border: "1px solid #393740",
-    padding: "8px 16px",
-    borderRadius: "20px",
-    fontSize: "13px",
-    cursor: "pointer",
-    transition: "all 0.15s ease",
-    fontWeight: "600"
-  },
-  genrePillActive: {
-    backgroundColor: "#f4c96b",
-    borderColor: "#f4c96b",
-    color: "#17140d"
-  },
-  sortWrapper: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px"
-  },
-  sortLabel: {
-    fontSize: "13px",
-    color: "#aaa7b2"
-  },
-  sortSelect: {
-    backgroundColor: "#1b1a20",
-    color: "#f5f3ef",
-    border: "1px solid #393740",
-    padding: "8px 12px",
-    borderRadius: "8px",
-    fontSize: "13px",
-    cursor: "pointer",
-    outline: "none"
-  },
-  resultsHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderBottom: "1px solid #29282e",
-    paddingBottom: "14px",
-    marginBottom: "28px"
-  },
-  resultsCount: {
-    margin: 0,
-    fontSize: "0.9rem",
-    color: "#aaa7b2"
-  },
-  apiNotice: {
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-    fontSize: "0.85rem",
-    color: "#f4c96b"
-  },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))",
-    gap: "24px 18px"
-  },
-  card: {
-    backgroundColor: "#19181e",
-    borderRadius: "13px",
-    overflow: "hidden",
-    border: "1px solid #2b2931",
-    display: "flex",
-    flexDirection: "column",
-    transition: "transform 0.2s ease, border-color 0.2s ease"
-  },
-  posterContainer: {
-    position: "relative",
-    aspectRatio: "2/3",
-    backgroundColor: "#25232b",
-    overflow: "hidden",
-    cursor: "pointer"
-  },
-  posterImage: {
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
-    display: "block"
-  },
-  posterOverlay: {
-    position: "absolute",
-    inset: 0,
-    backgroundColor: "rgba(16, 16, 20, 0.65)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    opacity: 0,
-    transition: "opacity 0.2s ease"
-  },
-  quickViewText: {
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-    backgroundColor: "#101014",
-    color: "#f5f3ef",
-    padding: "8px 14px",
-    borderRadius: "20px",
-    fontSize: "0.82rem",
-    fontWeight: "700",
-    border: "1px solid #393740"
-  },
-  ratingBadge: {
-    position: "absolute",
-    top: "10px",
-    left: "10px",
-    backgroundColor: "rgba(16, 16, 20, 0.85)",
-    color: "#f4c96b",
-    padding: "6px 8px",
-    borderRadius: "7px",
-    display: "flex",
-    alignItems: "center",
-    gap: "4px",
-    fontSize: "0.82rem",
-    fontWeight: "800",
-    border: "1px solid rgba(255, 255, 255, 0.15)"
-  },
-  genreBadge: {
-    position: "absolute",
-    top: "10px",
-    right: "10px",
-    backgroundColor: "rgba(16, 16, 20, 0.85)",
-    color: "#aaa7b2",
-    padding: "5px 8px",
-    borderRadius: "6px",
-    fontSize: "0.75rem",
-    fontWeight: "700",
-    border: "1px solid rgba(255, 255, 255, 0.1)"
-  },
-  cardBody: {
-    padding: "14px",
-    display: "flex",
-    flexDirection: "column",
-    flex: 1
-  },
-  cardHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: "8px",
-    marginBottom: "8px"
-  },
-  movieTitle: {
-    fontSize: "1rem",
-    fontWeight: "700",
-    margin: 0,
-    color: "#f5f3ef",
-    lineHeight: "1.4",
-    cursor: "pointer",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap"
-  },
-  movieMeta: {
-    display: "flex",
-    alignItems: "center",
-    gap: "4px",
-    fontSize: "0.82rem",
-    color: "#aaa7b2",
-    flexShrink: 0
-  },
-  overviewText: {
-    fontSize: "0.85rem",
-    color: "#d0cdd5",
-    lineHeight: "1.5",
-    margin: "0 0 14px 0",
-    display: "-webkit-box",
-    WebkitLineClamp: 3,
-    WebkitBoxOrient: "vertical",
-    overflow: "hidden",
-    flex: 1
-  },
-  userRatedBar: {
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-    backgroundColor: "#221d1b",
-    border: "1px solid #553d20",
-    color: "#f4c96b",
-    padding: "6px 10px",
-    borderRadius: "8px",
-    fontSize: "0.8rem",
-    marginBottom: "12px",
-    fontWeight: "600"
-  },
-  cardActions: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: "8px",
-    marginTop: "auto"
-  },
-  actionButton: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "6px",
-    padding: "9px 10px",
-    borderRadius: "8px",
-    fontSize: "0.82rem",
-    fontWeight: "700",
-    cursor: "pointer",
-    border: "1px solid transparent",
-    transition: "transform 0.15s ease"
-  },
-  actionButtonSecondary: {
-    backgroundColor: "#242229",
-    color: "#f0edf4",
-    borderColor: "#44414b"
-  },
-  actionButtonActive: {
-    backgroundColor: "rgba(16, 185, 129, 0.15)",
-    borderColor: "#10b981",
-    color: "#10b981"
-  },
-  actionButtonPrimary: {
-    backgroundColor: "#242229",
-    color: "#f5f3ef",
-    borderColor: "#44414b"
-  },
-  emptyState: {
-    textAlign: "center",
-    padding: "64px 20px",
-    backgroundColor: "#19181e",
-    borderRadius: "12px",
-    border: "1px solid #2b2931"
-  },
-  emptyTitle: {
-    fontSize: "1.15rem",
-    color: "#f5f3ef",
-    margin: "16px 0 6px 0"
-  },
-  emptySubtitle: {
-    fontSize: "0.9rem",
-    color: "#aaa7b2",
-    margin: "0 0 20px 0"
-  },
-  resetButton: {
-    backgroundColor: "#f4c96b",
-    color: "#17140d",
-    border: "none",
-    padding: "10px 20px",
-    borderRadius: "9px",
-    fontSize: "0.9rem",
-    cursor: "pointer",
-    fontWeight: "800"
-  },
-  modalOverlay: {
-    position: "fixed",
-    inset: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.8)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "20px",
-    zIndex: 50,
-    backdropFilter: "blur(6px)"
-  },
-  modalContent: {
-    backgroundColor: "#19181e",
-    borderRadius: "14px",
-    border: "1px solid #393740",
-    maxWidth: "750px",
-    width: "100%",
-    padding: "28px",
-    position: "relative",
-    color: "#f5f3ef",
-    boxShadow: "0 20px 40px rgba(0,0,0,0.6)"
-  },
-  modalCloseButton: {
-    position: "absolute",
-    top: "16px",
-    right: "16px",
-    backgroundColor: "#242229",
-    border: "1px solid #44414b",
-    color: "#f5f3ef",
-    borderRadius: "50%",
-    width: "36px",
-    height: "36px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    cursor: "pointer",
-    zIndex: 2
-  },
-  modalLayout: {
-    display: "grid",
-    gridTemplateColumns: "220px 1fr",
-    gap: "24px",
-    alignItems: "start"
-  },
-  modalPoster: {
-    width: "100%",
-    aspectRatio: "2/3",
-    objectFit: "cover",
-    borderRadius: "10px",
-    border: "1px solid #393740"
-  },
-  modalDetails: {
-    display: "flex",
-    flexDirection: "column"
-  },
-  modalHeaderRow: {
-    display: "flex",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: "12px",
-    marginBottom: "12px"
-  },
-  modalTitle: {
-    fontSize: "1.5rem",
-    fontWeight: "800",
-    margin: 0,
-    color: "#f5f3ef",
-    lineHeight: "1.2"
-  },
-  modalGenreTag: {
-    backgroundColor: "#242229",
-    color: "#f4c96b",
-    padding: "4px 10px",
-    borderRadius: "6px",
-    fontSize: "0.78rem",
-    fontWeight: "700",
-    border: "1px solid #44414b",
-    whiteSpace: "nowrap"
-  },
-  modalMetaRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: "16px",
-    marginBottom: "16px",
-    fontSize: "0.88px",
-    color: "#aaa7b2"
-  },
-  modalRatingBox: {
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-    backgroundColor: "#242229",
-    padding: "6px 12px",
-    borderRadius: "8px",
-    border: "1px solid #44414b"
-  },
-  modalRatingScore: {
-    fontSize: "1.1rem",
-    fontWeight: "800",
-    color: "#f4c96b"
-  },
-  modalRatingMax: {
-    fontSize: "0.8rem",
-    color: "#aaa7b2"
-  },
-  modalDate: {
-    fontSize: "0.85rem",
-    color: "#aaa7b2"
-  },
-  synopsisHeader: {
-    fontSize: "0.95rem",
-    fontWeight: "700",
-    color: "#f5f3ef",
-    margin: "0 0 6px 0"
-  },
-  modalOverview: {
-    fontSize: "0.9rem",
-    color: "#d0cdd5",
-    lineHeight: "1.6",
-    margin: "0 0 24px 0"
-  },
-  modalActions: {
-    display: "flex",
-    gap: "12px",
-    marginTop: "auto"
-  },
-  modalActionButton: {
-    flex: 1,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "8px",
-    padding: "11px 16px",
-    borderRadius: "9px",
-    fontSize: "0.9rem",
-    fontWeight: "700",
-    cursor: "pointer",
-    border: "1px solid transparent"
-  },
-  ratingModalContent: {
-    backgroundColor: "#19181e",
-    borderRadius: "14px",
-    border: "1px solid #393740",
-    maxWidth: "440px",
-    width: "100%",
-    padding: "24px",
-    color: "#f5f3ef",
-    boxShadow: "0 20px 40px rgba(0,0,0,0.6)"
-  },
-  ratingModalHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "8px"
-  },
-  ratingModalTitle: {
-    fontSize: "1.2rem",
-    fontWeight: "800",
-    margin: 0,
-    color: "#f5f3ef"
-  },
-  ratingModalSubtitle: {
-    fontSize: "0.85rem",
-    color: "#aaa7b2",
-    margin: "0 0 20px 0"
-  },
-  scoreDisplayBox: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "10px",
-    backgroundColor: "#101014",
-    border: "1px solid #393740",
-    borderRadius: "12px",
-    padding: "16px",
-    marginBottom: "20px"
-  },
-  scoreDisplayNumber: {
-    fontSize: "2rem",
-    fontWeight: "800",
-    color: "#f4c96b"
-  },
-  scoreDisplayScale: {
-    fontSize: "1rem",
-    color: "#aaa7b2",
-    fontWeight: "600"
-  },
-  decimalInputContainer: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    marginBottom: "16px"
-  },
-  decimalInputLabel: {
-    fontSize: "0.9rem",
-    fontWeight: "700",
-    color: "#f5f3ef"
-  },
-  decimalInput: {
-    flex: 1,
-    backgroundColor: "#101014",
-    border: "1px solid #393740",
-    borderRadius: "8px",
-    padding: "10px 14px",
-    fontSize: "1rem",
-    color: "#f5f3ef",
-    outline: "none"
-  },
-  sliderContainer: {
-    marginBottom: "20px"
-  },
-  rangeSlider: {
-    width: "100%",
-    accentColor: "#f4c96b",
-    cursor: "pointer",
-    marginBottom: "6px"
-  },
-  sliderTicks: {
-    display: "flex",
-    justifyContent: "space-between",
-    fontSize: "0.75rem",
-    color: "#85818d"
-  },
-  presetsWrapper: {
-    marginBottom: "20px"
-  },
-  presetsLabel: {
-    display: "block",
-    fontSize: "0.8rem",
-    color: "#aaa7b2",
-    marginBottom: "8px"
-  },
-  presetsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(6, 1fr)",
-    gap: "6px"
-  },
-  presetButton: {
-    backgroundColor: "#242229",
-    border: "1px solid #44414b",
-    color: "#f5f3ef",
-    borderRadius: "6px",
-    padding: "6px 0",
-    fontSize: "0.8rem",
-    fontWeight: "700",
-    cursor: "pointer"
-  },
-  ratingErrorText: {
-    color: "#ffb4b4",
-    fontSize: "0.82rem",
-    marginBottom: "12px",
-    margin: "0 0 12px 0"
-  },
-  ratingModalActions: {
-    display: "flex",
-    gap: "10px",
-    justifyContent: "flex-end"
-  },
-  clearRatingButton: {
-    backgroundColor: "transparent",
-    border: "1px solid #6a3338",
-    color: "#ffb4b4",
-    borderRadius: "8px",
-    padding: "9px 14px",
-    fontSize: "0.85rem",
-    fontWeight: "700",
-    cursor: "pointer",
-    marginRight: "auto"
-  },
-  cancelRatingButton: {
-    backgroundColor: "#242229",
-    border: "1px solid #44414b",
-    color: "#f0edf4",
-    borderRadius: "8px",
-    padding: "9px 14px",
-    fontSize: "0.85rem",
-    fontWeight: "700",
-    cursor: "pointer"
-  },
-  saveRatingButton: {
-    backgroundColor: "#f4c96b",
-    border: "none",
-    color: "#17140d",
-    borderRadius: "8px",
-    padding: "9px 20px",
-    fontSize: "0.85rem",
-    fontWeight: "800",
-    cursor: "pointer"
-  }
-};
