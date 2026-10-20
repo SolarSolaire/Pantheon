@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Film, Lock, User, ArrowRight, Sparkles } from "lucide-react";
 import api from "../api/axios";
-import { loginStyles as styles } from "../sharedStyles.jsx";
+import styles from "../styles.jsx";
 
 export default function Login() {
   const [backendStatus, setBackendStatus] = useState("Connecting to backend...");
@@ -40,77 +40,77 @@ export default function Login() {
   };
 
   return (
-    <div style={styles.page}>
+    <div style={styles.auth.authPage}>
       {/* Split-screen container */}
-      <div style={styles.loginCard}>
+      <div style={styles.auth.authCard}>
         {/* Left Side - Pantheon Branding & Cinematic Backdrop */}
-        <div style={styles.brandSide}>
-          <div style={styles.brandContent}>
-            <div style={styles.logoRow}>
+        <div style={styles.auth.authBrandSide}>
+          <div style={styles.auth.authBrandContent}>
+            <div style={styles.auth.authLogoRow}>
               <Film size={36} color="#f4c96b" />
-              <span style={styles.logoText}>PANTHEON</span>
+              <span style={styles.auth.authLogoText}>PANTHEON</span>
             </div>
-            <h1 style={styles.brandTitle}>Movie Tracker</h1>
-            <p style={styles.brandSubtitle}>
+            <h1 style={styles.auth.authBrandTitle}>Movie Tracker</h1>
+            <p style={styles.auth.authBrandSubtitle}>
               Enter the gateway to log, rate, and discover your personal collection of cinema.
             </p>
           </div>
-          <div style={styles.brandFooter}>
+          <div style={styles.auth.authBrandFooter}>
             <Sparkles size={16} color="#f4c96b" />
             <span>Frontend active on port 5173</span>
           </div>
         </div>
 
         {/* Right Side - Form, Status & Navigation */}
-        <div style={styles.formSide}>
-          <div style={styles.formHeader}>
-            <h2 style={styles.formTitle}>Welcome Back</h2>
-            <p style={styles.formSubtitle}>Sign in to your account to continue</p>
+        <div style={styles.auth.authFormSide}>
+          <div style={styles.auth.authFormHeader}>
+            <h2 style={styles.auth.authFormTitle}>Welcome Back</h2>
+            <p style={styles.auth.authFormSubtitle}>Sign in to your account to continue</p>
           </div>
 
-          {error && <div style={styles.errorBanner}>{error}</div>}
+          {error && <div style={styles.auth.authErrorBanner}>{error}</div>}
 
-          <form onSubmit={handleLogin} style={styles.form}>
-            <div style={styles.inputGroup}>
-              <User size={18} color="#85818d" style={styles.inputIcon} />
+          <form onSubmit={handleLogin} style={styles.auth.authForm}>
+            <div style={styles.auth.authInputGroup}>
+              <User size={18} color="#85818d" style={styles.auth.authInputIcon} />
               <input
                 type="text"
                 placeholder="Username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                style={styles.input}
+                style={styles.auth.authInput}
                 required
               />
             </div>
 
-            <div style={styles.inputGroup}>
-              <Lock size={18} color="#85818d" style={styles.inputIcon} />
+            <div style={styles.auth.authInputGroup}>
+              <Lock size={18} color="#85818d" style={styles.auth.authInputIcon} />
               <input
                 type="password"
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                style={styles.input}
+                style={styles.auth.authInput}
                 required
               />
             </div>
 
-            <button type="submit" style={styles.primaryBtn}>
+            <button type="submit" style={styles.auth.authPrimaryButton}>
               Log In <ArrowRight size={18} />
             </button>
           </form>
 
           {/* Backend Health Status Box */}
-          <div style={styles.statusBox}>
-            <span style={styles.statusTitle}>Backend Status (Port 5001):</span>
-            <p style={styles.statusMessage}>{backendStatus}</p>
+          <div style={styles.auth.loginStatusBox}>
+            <span style={styles.auth.loginStatusTitle}>Backend Status (Port 5001):</span>
+            <p style={styles.auth.loginStatusMessage}>{backendStatus}</p>
           </div>
 
           {/* Secondary Actions */}
-          <div style={styles.actionRow}>
+          <div style={styles.auth.loginActionRow}>
             <button
               type="button"
-              style={styles.newAccountBtn}
+              style={styles.auth.newAccountButton}
               onClick={handleNewAccount}
             >
               New to Pantheon?

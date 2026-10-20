@@ -9,7 +9,7 @@ import {
   X
 } from "lucide-react";
 import { clearAuthentication, isAuthenticated } from "../utils/auth";
-import { homeStyles as styles, movieCardStyles } from "../sharedStyles.jsx";
+import styles from "../styles.jsx";
 
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 const API_URL = "https://api.themoviedb.org/3";
@@ -29,6 +29,7 @@ export default function Home() {
   const [search, setSearch] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [suggestionsError, setSuggestionsError] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -112,13 +113,21 @@ export default function Home() {
     if (!query) {
       setSuggestions([]);
       setSuggestionsLoading(false);
+      setSuggestionsError("");
       return undefined;
     }
-    if (!API_KEY) return undefined;
+    if (!API_KEY) {
+      setSuggestions([]);
+      setSuggestionsLoading(false);
+      setSuggestionsError("Please add your TMDB API token to your .env file.");
+      return undefined;
+    }
 
     const controller = new AbortController();
+    setSuggestions([]);
+    setSuggestionsLoading(true);
+    setSuggestionsError("");
     const timeout = setTimeout(async () => {
-      setSuggestionsLoading(true);
       try {
         const response = await fetch(
           `${API_URL}/search/movie?query=${encodeURIComponent(query)}&language=en-US&page=1&include_adult=false`,
@@ -134,7 +143,10 @@ export default function Home() {
         const data = await response.json();
         setSuggestions((data.results || []).slice(0, 6));
       } catch (err) {
-        if (err.name !== "AbortError") setSuggestions([]);
+        if (err.name !== "AbortError") {
+          setSuggestions([]);
+          setSuggestionsError(err.message || "Could not load suggestions.");
+        }
       } finally {
         if (!controller.signal.aborted) setSuggestionsLoading(false);
       }
@@ -201,13 +213,13 @@ export default function Home() {
 
   return (
     <div>
-      <header style={styles.navBar}>
-        <a style={styles.navBrand} href="#">
+      <header style={styles.home.navBar}>
+        <a style={styles.home.navBrand} href="#">
           <span>Pantheon</span>
         </a>
-        <div style={styles.navActions}>
-          <div style={styles.searchWrap}>
-            <form style={styles.searchBox} onSubmit={handleSearchSubmit}>
+        <div style={styles.home.navActions}>
+          <div style={styles.home.searchWrap}>
+            <form style={styles.home.searchBox} onSubmit={handleSearchSubmit}>
               <span aria-hidden="true">⌕</span>
               <input
                 type="search"
@@ -217,7 +229,7 @@ export default function Home() {
                 autoComplete="off"
                 aria-expanded={dropdownOpen && Boolean(search.trim())}
                 aria-controls="movie-search-suggestions"
-                style={styles.searchInput}
+                style={styles.home.searchInput}
                 onFocus={() => setDropdownOpen(true)}
                 onChange={(event) => {
                   setSearch(event.target.value);
@@ -230,7 +242,7 @@ export default function Home() {
               {search && (
                 <button
                   type="button"
-                  style={styles.clearButton}
+                  style={styles.home.clearButton}
                   onClick={() => {
                     setSearch("");
                     setDropdownOpen(false);
@@ -240,22 +252,31 @@ export default function Home() {
                   ×
                 </button>
               )}
+              <button type="submit" style={styles.home.searchSubmit}>
+                Enter
+              </button>
             </form>
             {dropdownOpen && search.trim() && (
               <div
-                style={styles.suggestionsDropdown}
+                style={styles.home.suggestionsDropdown}
                 id="movie-search-suggestions"
                 role="listbox"
                 aria-label="Suggested movies"
               >
                 {suggestionsLoading ? (
-                  <div style={styles.suggestionStatus}>Searching movies…</div>
+                  <div style={styles.home.suggestionStatus} role="status" aria-live="polite">
+                    Searching movies…
+                  </div>
+                ) : suggestionsError ? (
+                  <div style={styles.home.suggestionStatus} role="status" aria-live="polite">
+                    {suggestionsError}
+                  </div>
                 ) : suggestions.length ? (
                   suggestions.map((movie) => (
                     <button
                       type="button"
                       className="home-suggestion-item"
-                      style={styles.suggestionItem}
+                      style={styles.home.suggestionItem}
                       role="option"
                       aria-selected="false"
                       key={movie.id}
@@ -263,52 +284,49 @@ export default function Home() {
                     >
                       {movie.poster_path ? (
                         <img
-                          style={styles.suggestionPoster}
+                          style={styles.home.suggestionPoster}
                           src={`${IMAGE_URL}${movie.poster_path}`}
                           alt=""
                         />
                       ) : (
-                        <span style={styles.suggestionPoster} aria-hidden="true" />
+                        <span style={styles.home.suggestionPoster} aria-hidden="true" />
                       )}
-                      <span style={styles.suggestionText}>
-                        <span style={styles.suggestionTitle}>{movie.title}</span>
-                        <span style={styles.suggestionYear}>
+                      <span style={styles.home.suggestionText}>
+                        <span style={styles.home.suggestionTitle}>{movie.title}</span>
+                        <span style={styles.home.suggestionYear}>
                           {movie.release_date?.slice(0, 4) || "Release year unknown"}
                         </span>
                       </span>
                     </button>
                   ))
                 ) : (
-                  <div style={styles.suggestionStatus}>No matching movies found.</div>
+                  <div style={styles.home.suggestionStatus}>No matching movies found.</div>
                 )}
               </div>
             )}
           </div>
-          <button type="button" style={styles.searchSubmit} onClick={handleSearchSubmit}>
-            Enter
-          </button>
-          <button type="button" style={styles.logoutBtn} onClick={handleAuthAction}>
+          <button type="button" style={styles.shared.navButton} onClick={handleAuthAction}>
             Logout
           </button>
         </div>
       </header>
 
-      <main style={styles.container}>
+      <main style={styles.shared.container}>
         <section id="movies">
-          <h2 style={styles.sectionTitle}>Featured Movies</h2>
+          <h2 style={styles.home.sectionTitle}>Featured Movies</h2>
 
-          {loading && <div style={styles.statusMessage}>Loading movies...</div>}
+          {loading && <div style={styles.home.statusMessage}>Loading movies...</div>}
 
           {!loading && error && (
-            <div style={{ ...styles.statusMessage, ...styles.errorMessage }}>{error}</div>
+            <div style={{ ...styles.home.statusMessage, ...styles.home.errorMessage }}>{error}</div>
           )}
 
           {!loading && !error && movies.length === 0 && (
-            <div style={styles.statusMessage}>No movies found. Try another search.</div>
+            <div style={styles.home.statusMessage}>No movies found. Try another search.</div>
           )}
 
           {!loading && !error && movies.length > 0 && (
-            <div style={styles.grid}>
+            <div style={styles.shared.grid}>
               {movies.map((movie) => {
                 const inWatchlist = !!watchlist[movie.id];
                 const userRating = userRatings[movie.id];
@@ -317,17 +335,17 @@ export default function Home() {
                   : "N/A";
 
                 return (
-                  <article key={movie.id} style={movieCardStyles.movieCard}>
+                  <article key={movie.id} style={styles.movieCard.movieCard}>
                     {/* Poster Thumbnail */}
                     <div
-                      style={movieCardStyles.posterContainer}
+                      style={styles.movieCard.posterContainer}
                       onClick={() => handleMovieSelect(movie)}
                     >
                       {movie.poster_path ? (
                         <img
                           src={`${IMAGE_URL}${movie.poster_path}`}
                           alt={movie.title}
-                          style={movieCardStyles.posterImage}
+                          style={styles.movieCard.posterImage}
                           loading="lazy"
                           onError={(event) => {
                             event.currentTarget.onerror = null;
@@ -336,16 +354,16 @@ export default function Home() {
                           }}
                         />
                       ) : (
-                        <div style={styles.posterPlaceholder}>Poster unavailable</div>
+                        <div style={styles.home.posterPlaceholder}>Poster unavailable</div>
                       )}
-                      <div style={movieCardStyles.posterOverlay}>
-                        <span style={movieCardStyles.quickViewText}>
+                      <div style={styles.movieCard.posterOverlay}>
+                        <span style={styles.movieCard.quickViewText}>
                           <Info size={14} /> View Details
                         </span>
                       </div>
 
                       {/* Score badge */}
-                      <div style={movieCardStyles.ratingBadge}>
+                      <div style={styles.movieCard.ratingBadge}>
                         <Star
                           size={13}
                           fill="#f4c96b"
@@ -356,31 +374,31 @@ export default function Home() {
 
                       {/* Genre pill badge */}
                       {movie.genre && (
-                        <div style={movieCardStyles.genreBadge}>{movie.genre}</div>
+                        <div style={styles.movieCard.genreBadge}>{movie.genre}</div>
                       )}
                     </div>
 
                     {/* Card Content */}
-                    <div style={movieCardStyles.cardBody}>
-                      <div style={movieCardStyles.cardHeader}>
+                    <div style={styles.movieCard.cardBody}>
+                      <div style={styles.movieCard.cardHeader}>
                         <h2
-                          style={movieCardStyles.movieTitle}
+                          style={styles.movieCard.movieTitle}
                           title={movie.title}
                           onClick={() => handleMovieSelect(movie)}
                         >
                           {movie.title}
                         </h2>
-                        <div style={movieCardStyles.movieMeta}>
+                        <div style={styles.movieCard.movieMeta}>
                           <Calendar size={13} color="#85818d" />
                           <span>{releaseYear}</span>
                         </div>
                       </div>
 
-                      <p style={movieCardStyles.overviewText}>{movie.overview}</p>
+                      <p style={styles.movieCard.overviewText}>{movie.overview}</p>
 
                       {/* User Rating Indicator (if rated) */}
                       {userRating && (
-                        <div style={movieCardStyles.userRatedBar}>
+                        <div style={styles.movieCard.userRatedBar}>
                           <Star size={13} fill="#f4c96b" color="#f4c96b" />
                           <span>
                             Your rating: <strong>{userRating} / 10</strong>
@@ -389,14 +407,14 @@ export default function Home() {
                       )}
 
                       {/* Action Buttons */}
-                      <div style={movieCardStyles.cardActions}>
+                      <div style={styles.movieCard.cardActions}>
                         <button
                           onClick={() => handleToggleWatchlist(movie)}
                           style={{
-                            ...movieCardStyles.actionButton,
+                            ...styles.movieCard.actionButton,
                             ...(inWatchlist
-                              ? movieCardStyles.actionButtonActive
-                              : movieCardStyles.actionButtonSecondary)
+                              ? styles.movieCard.actionButtonActive
+                              : styles.movieCard.actionButtonSecondary)
                           }}
                           title={
                             inWatchlist
@@ -420,8 +438,8 @@ export default function Home() {
                         <button
                           onClick={() => handleOpenRatingModal(movie)}
                           style={{
-                            ...movieCardStyles.actionButton,
-                            ...movieCardStyles.actionButtonPrimary
+                            ...styles.movieCard.actionButton,
+                            ...styles.movieCard.actionButtonPrimary
                           }}
                         >
                           <Star
@@ -444,65 +462,65 @@ export default function Home() {
       {/* Movie Details Modal */}
       {selectedMovie && (
         <div
-          style={searchStyles.modalOverlay}
+          style={styles.movieCard.modalOverlay}
           onClick={() => setSelectedMovie(null)}
         >
           <div
-            style={searchStyles.modalContent}
+            style={styles.movieCard.modalContent}
             onClick={(event) => event.stopPropagation()}
           >
             <button
-              style={searchStyles.modalCloseButton}
+              style={styles.movieCard.modalCloseButton}
               onClick={() => setSelectedMovie(null)}
               aria-label="Close movie details"
             >
               <X size={20} />
             </button>
 
-            <div style={searchStyles.modalLayout}>
+            <div style={styles.movieCard.modalLayout}>
               {selectedMovie.poster_path && (
                 <img
                   src={`${IMAGE_URL}${selectedMovie.poster_path}`}
                   alt={selectedMovie.title}
-                  style={searchStyles.modalPoster}
+                  style={styles.movieCard.modalPoster}
                 />
               )}
-              <div style={searchStyles.modalDetails}>
-                <div style={searchStyles.modalHeaderRow}>
-                  <h2 style={searchStyles.modalTitle}>{selectedMovie.title}</h2>
+              <div style={styles.movieCard.modalDetails}>
+                <div style={styles.movieCard.modalHeaderRow}>
+                  <h2 style={styles.movieCard.modalTitle}>{selectedMovie.title}</h2>
                   {selectedMovie.genre && (
-                    <span style={searchStyles.modalGenreTag}>
+                    <span style={styles.movieCard.modalGenreTag}>
                       {selectedMovie.genre}
                     </span>
                   )}
                 </div>
 
-                <div style={searchStyles.modalMetaRow}>
-                  <div style={searchStyles.modalRatingBox}>
+                <div style={styles.movieCard.modalMetaRow}>
+                  <div style={styles.movieCard.modalRatingBox}>
                     <Star size={18} fill="#f4c96b" color="#f4c96b" />
-                    <span style={searchStyles.modalRatingScore}>
+                    <span style={styles.movieCard.modalRatingScore}>
                       {selectedMovie.vote_average?.toFixed(1) ?? "N/A"}
                     </span>
-                    <span style={searchStyles.modalRatingMax}>/ 10</span>
+                    <span style={styles.movieCard.modalRatingMax}>/ 10</span>
                   </div>
-                  <span style={searchStyles.modalDate}>
+                  <span style={styles.movieCard.modalDate}>
                     Release Date: {selectedMovie.release_date || "Unknown"}
                   </span>
                 </div>
 
-                <h4 style={searchStyles.synopsisHeader}>Synopsis</h4>
-                <p style={searchStyles.modalOverview}>
+                <h4 style={styles.movieCard.synopsisHeader}>Synopsis</h4>
+                <p style={styles.movieCard.modalOverview}>
                   {selectedMovie.overview || "No overview available."}
                 </p>
 
-                <div style={searchStyles.modalActions}>
+                <div style={styles.movieCard.modalActions}>
                   <button
                     onClick={() => handleToggleWatchlist(selectedMovie)}
                     style={{
-                      ...searchStyles.modalActionButton,
+                      ...styles.movieCard.modalActionButton,
                       ...(watchlist[selectedMovie.id]
-                        ? movieCardStyles.actionButtonActive
-                        : movieCardStyles.actionButtonSecondary)
+                        ? styles.movieCard.actionButtonActive
+                        : styles.movieCard.actionButtonSecondary)
                     }}
                   >
                     {watchlist[selectedMovie.id] ? (
@@ -523,8 +541,8 @@ export default function Home() {
                   <button
                     onClick={() => handleOpenRatingModal(selectedMovie)}
                     style={{
-                      ...searchStyles.modalActionButton,
-                      ...movieCardStyles.actionButtonPrimary
+                      ...styles.movieCard.modalActionButton,
+                      ...styles.movieCard.actionButtonPrimary
                     }}
                   >
                     <Star
@@ -548,33 +566,33 @@ export default function Home() {
       {/* Decimal Rating Modal */}
       {activeRatingModal && (
         <div
-          style={searchStyles.modalOverlay}
+          style={styles.movieCard.modalOverlay}
           onClick={() => setActiveRatingModal(null)}
         >
           <div
-            style={searchStyles.ratingModalContent}
+            style={styles.movieCard.ratingModalContent}
             onClick={(event) => event.stopPropagation()}
           >
-            <div style={searchStyles.ratingModalHeader}>
-              <h3 style={searchStyles.ratingModalTitle}>
+            <div style={styles.movieCard.ratingModalHeader}>
+              <h3 style={styles.movieCard.ratingModalTitle}>
                 Rate "{activeRatingModal.title}"
               </h3>
               <button
-                style={searchStyles.modalCloseButton}
+                style={styles.movieCard.modalCloseButton}
                 onClick={() => setActiveRatingModal(null)}
                 aria-label="Close rating dialog"
               >
                 <X size={18} />
               </button>
             </div>
-            <p style={searchStyles.ratingModalSubtitle}>
+            <p style={styles.movieCard.ratingModalSubtitle}>
               Enter a decimal rating from 0.0 to 10.0 (e.g. 7.3 or 8.8):
             </p>
 
             <form onSubmit={handleSaveRating}>
-              <div style={searchStyles.scoreDisplayBox}>
+              <div style={styles.movieCard.scoreDisplayBox}>
                 <Star size={32} fill="#f4c96b" color="#f4c96b" />
-                <span style={searchStyles.scoreDisplayNumber}>
+                <span style={styles.movieCard.scoreDisplayNumber}>
                   {(() => {
                     const parsedRating = parseFloat(ratingInput);
                     return !Number.isNaN(parsedRating) &&
@@ -584,11 +602,11 @@ export default function Home() {
                       : "--";
                   })()}
                 </span>
-                <span style={searchStyles.scoreDisplayScale}>/ 10.0</span>
+                <span style={styles.movieCard.scoreDisplayScale}>/ 10.0</span>
               </div>
 
-              <div style={searchStyles.decimalInputContainer}>
-                <label style={searchStyles.decimalInputLabel}>Rating:</label>
+              <div style={styles.movieCard.decimalInputContainer}>
+                <label style={styles.movieCard.decimalInputLabel}>Rating:</label>
                 <input
                   type="number"
                   step="0.1"
@@ -601,11 +619,11 @@ export default function Home() {
                   }}
                   placeholder="e.g. 7.3"
                   autoFocus
-                  style={searchStyles.decimalInput}
+                  style={styles.movieCard.decimalInput}
                 />
               </div>
 
-              <div style={searchStyles.sliderContainer}>
+              <div style={styles.movieCard.sliderContainer}>
                 <input
                   type="range"
                   min="0"
@@ -621,9 +639,9 @@ export default function Home() {
                     setRatingInput(parseFloat(event.target.value).toFixed(1));
                     setRatingError("");
                   }}
-                  style={searchStyles.rangeSlider}
+                  style={styles.movieCard.rangeSlider}
                 />
-                <div style={searchStyles.sliderTicks}>
+                <div style={styles.movieCard.sliderTicks}>
                   <span>0.0</span>
                   <span>2.5</span>
                   <span>5.0</span>
@@ -632,9 +650,9 @@ export default function Home() {
                 </div>
               </div>
 
-              <div style={searchStyles.presetsWrapper}>
-                <span style={searchStyles.presetsLabel}>Quick picks:</span>
-                <div style={searchStyles.presetsGrid}>
+              <div style={styles.movieCard.presetsWrapper}>
+                <span style={styles.movieCard.presetsLabel}>Quick picks:</span>
+                <div style={styles.movieCard.presetsGrid}>
                   {[6.5, 7.3, 7.8, 8.2, 8.8, 9.4].map((preset) => (
                     <button
                       type="button"
@@ -643,7 +661,7 @@ export default function Home() {
                         setRatingInput(preset.toFixed(1));
                         setRatingError("");
                       }}
-                      style={searchStyles.presetButton}
+                      style={styles.movieCard.presetButton}
                     >
                       {preset.toFixed(1)}
                     </button>
@@ -652,15 +670,15 @@ export default function Home() {
               </div>
 
               {ratingError && (
-                <p style={searchStyles.ratingErrorText}>{ratingError}</p>
+                <p style={styles.movieCard.ratingErrorText}>{ratingError}</p>
               )}
 
-              <div style={searchStyles.ratingModalActions}>
+              <div style={styles.movieCard.ratingModalActions}>
                 {userRatings[activeRatingModal.id] && (
                   <button
                     type="button"
                     onClick={handleClearRating}
-                    style={searchStyles.clearRatingButton}
+                    style={styles.movieCard.clearRatingButton}
                   >
                     Remove
                   </button>
@@ -668,11 +686,11 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => setActiveRatingModal(null)}
-                  style={searchStyles.cancelRatingButton}
+                  style={styles.movieCard.cancelRatingButton}
                 >
                   Cancel
                 </button>
-                <button type="submit" style={searchStyles.saveRatingButton}>
+                <button type="submit" style={styles.movieCard.saveRatingButton}>
                   Save Rating
                 </button>
               </div>

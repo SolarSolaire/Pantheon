@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { searchStyles as styles, movieCardStyles } from "../sharedStyles.jsx";
+import styles from "../styles.jsx";
 import {
   Search as SearchIcon,
   Star,
@@ -258,24 +258,24 @@ export default function Search() {
   }, [searchQuery, selectedGenre, sortBy]);
 
   return (
-    <div style={styles.page}>
+    <div>
       {/* Top Navigation Bar */}
-      <header style={styles.navBar}>
-        <a className="logo" href="#" onClick={(e) => { e.preventDefault(); navigate("/home"); }} style={styles.navBrand}>
+      <header style={styles.search.navBar}>
+        <a className="logo" href="#" onClick={(e) => { e.preventDefault(); navigate("/home"); }} style={styles.search.navBrand}>
           <Film size={22} color="#f4c96b" />
           <span>Pantheon</span>
         </a>
-        <div style={styles.navActions}>
+        <div style={styles.search.navActions}>
           <button
             type="button"
-            style={styles.accountBtn}
+            style={styles.shared.navButton}
             onClick={() => navigate("/profile")}
           >
             Account
           </button>
           <button
             type="button"
-            style={styles.logoutBtn}
+            style={styles.shared.navButton}
             onClick={handleAuthAction}
           >
             Logout
@@ -284,28 +284,28 @@ export default function Search() {
       </header>
 
       {/* Main Content Area */}
-      <main style={styles.container}>
+      <main style={styles.shared.container}>
         {/* Search Header Banner */}
-        <section style={styles.heroSection}>
-          <h1 style={styles.heroTitle}>Discover & Track Movies</h1>
-          <p style={styles.heroSubtitle}>
+        <section style={styles.search.heroSection}>
+          <h1 style={styles.search.heroTitle}>Discover & Track Movies</h1>
+          <p style={styles.search.heroSubtitle}>
             Search our catalog, add movies to your watchlist, and rate your favorites.
           </p>
 
           {/* Search Bar Input */}
-          <div style={styles.searchBarWrapper}>
-            <SearchIcon size={20} color="#85818d" style={styles.searchIcon} />
+          <div style={styles.search.searchBarWrapper}>
+            <SearchIcon size={20} color="#85818d" style={styles.search.searchIcon} />
             <input
               type="text"
               placeholder="Search by title, overview, or genre..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              style={styles.searchInput}
+              style={styles.search.searchInput}
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                style={styles.clearButton}
+                style={styles.search.clearButton}
                 title="Clear search"
               >
                 <X size={18} />
@@ -314,15 +314,15 @@ export default function Search() {
           </div>
 
           {/* Genre Filters & Sorting */}
-          <div style={styles.filterBar}>
-            <div style={styles.genrePills}>
+          <div style={styles.search.filterBar}>
+            <div style={styles.search.genrePills}>
               {GENRES.map((genre) => (
                 <button
                   key={genre}
                   onClick={() => setSelectedGenre(genre)}
                   style={{
-                    ...styles.genrePill,
-                    ...(selectedGenre === genre ? styles.genrePillActive : {})
+                    ...styles.search.genrePill,
+                    ...(selectedGenre === genre ? styles.search.genrePillActive : {})
                   }}
                 >
                   {genre}
@@ -330,13 +330,13 @@ export default function Search() {
               ))}
             </div>
 
-            <div style={styles.sortWrapper}>
+            <div style={styles.search.sortWrapper}>
               <SlidersHorizontal size={15} color="#aaa7b2" />
-              <label style={styles.sortLabel}>Sort by:</label>
+              <label style={styles.search.sortLabel}>Sort by:</label>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                style={styles.sortSelect}
+                style={styles.search.sortSelect}
               >
                 <option value="rating-desc">Highest Rated</option>
                 <option value="rating-asc">Lowest Rated</option>
@@ -349,13 +349,13 @@ export default function Search() {
         </section>
 
         {/* Results Counter / Info */}
-        <div style={styles.resultsHeader}>
-          <p style={styles.resultsCount}>
+        <div style={styles.search.resultsHeader}>
+          <p style={styles.search.resultsCount}>
             Showing <strong style={{ color: "#f5f3ef" }}>{filteredMovies.length}</strong> {filteredMovies.length === 1 ? "movie" : "movies"}
             {searchQuery && ` for "${searchQuery}"`}
             {selectedGenre !== "All" && ` in ${selectedGenre}`}
           </p>
-          <div style={styles.apiNotice}>
+          <div style={styles.search.apiNotice}>
             <Sparkles size={14} color="#f4c96b" />
             <span>Mock catalog active — ready for API connection</span>
           </div>
@@ -363,10 +363,10 @@ export default function Search() {
 
         {/* Movies Grid */}
         {filteredMovies.length === 0 ? (
-          <div style={styles.emptyState}>
+          <div style={styles.search.emptyState}>
             <Film size={48} color="#85818d" />
-            <h3 style={styles.emptyTitle}>No movies found</h3>
-            <p style={styles.emptySubtitle}>
+            <h3 style={styles.search.emptyTitle}>No movies found</h3>
+            <p style={styles.search.emptySubtitle}>
               Try searching with a different title or clearing your genre filter.
             </p>
             <button
@@ -374,13 +374,13 @@ export default function Search() {
                 setSearchQuery("");
                 setSelectedGenre("All");
               }}
-              style={styles.resetButton}
+              style={styles.search.resetButton}
             >
               Reset Filters
             </button>
           </div>
         ) : (
-          <div style={styles.grid}>
+          <div style={styles.shared.grid}>
             {filteredMovies.map((movie) => {
               const inWatchlist = !!watchlist[movie.id];
               const userRating = userRatings[movie.id];
@@ -389,72 +389,72 @@ export default function Search() {
                 : "N/A";
 
               return (
-                <article key={movie.id} style={movieCardStyles.movieCard}>
+                <article key={movie.id} style={styles.movieCard.movieCard}>
                   {/* Poster Thumbnail */}
                   <div
-                    style={movieCardStyles.posterContainer}
+                    style={styles.movieCard.posterContainer}
                     onClick={() => setSelectedMovie(movie)}
                   >
                     <img
                       src={movie.poster_path}
                       alt={movie.title}
-                      style={movieCardStyles.posterImage}
+                      style={styles.movieCard.posterImage}
                       onError={(e) => {
                         e.target.onerror = null;
                         e.target.src = "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=500&auto=format&fit=crop&q=60";
                       }}
                     />
-                    <div style={movieCardStyles.posterOverlay}>
-                      <span style={movieCardStyles.quickViewText}>
+                    <div style={styles.movieCard.posterOverlay}>
+                      <span style={styles.movieCard.quickViewText}>
                         <Info size={14} /> View Details
                       </span>
                     </div>
 
                     {/* Score badge */}
-                    <div style={movieCardStyles.ratingBadge}>
+                    <div style={styles.movieCard.ratingBadge}>
                       <Star size={13} fill="#f4c96b" color="#f4c96b" />
                       <span>{movie.vote_average.toFixed(1)}</span>
                     </div>
 
                     {/* Genre pill badge */}
-                    <div style={movieCardStyles.genreBadge}>{movie.genre}</div>
+                    <div style={styles.movieCard.genreBadge}>{movie.genre}</div>
                   </div>
 
                   {/* Card Content */}
-                  <div style={movieCardStyles.cardBody}>
-                    <div style={movieCardStyles.cardHeader}>
+                  <div style={styles.movieCard.cardBody}>
+                    <div style={styles.movieCard.cardHeader}>
                       <h2
-                        style={movieCardStyles.movieTitle}
+                        style={styles.movieCard.movieTitle}
                         title={movie.title}
                         onClick={() => setSelectedMovie(movie)}
                       >
                         {movie.title}
                       </h2>
-                      <div style={movieCardStyles.movieMeta}>
+                      <div style={styles.movieCard.movieMeta}>
                         <Calendar size={13} color="#85818d" />
                         <span>{releaseYear}</span>
                       </div>
                     </div>
 
-                    <p style={movieCardStyles.overviewText}>
+                    <p style={styles.movieCard.overviewText}>
                       {movie.overview}
                     </p>
 
                     {/* User Rating Indicator (if rated) */}
                     {userRating && (
-                      <div style={movieCardStyles.userRatedBar}>
+                      <div style={styles.movieCard.userRatedBar}>
                         <Star size={13} fill="#f4c96b" color="#f4c96b" />
                         <span>Your rating: <strong>{userRating} / 10</strong></span>
                       </div>
                     )}
 
                     {/* Action Buttons */}
-                    <div style={movieCardStyles.cardActions}>
+                    <div style={styles.movieCard.cardActions}>
                       <button
                         onClick={() => handleToggleWatchlist(movie)}
                         style={{
-                          ...movieCardStyles.actionButton,
-                          ...(inWatchlist ? movieCardStyles.actionButtonActive : movieCardStyles.actionButtonSecondary)
+                          ...styles.movieCard.actionButton,
+                          ...(inWatchlist ? styles.movieCard.actionButtonActive : styles.movieCard.actionButtonSecondary)
                         }}
                         title={inWatchlist ? "Remove from watchlist" : "Add to watchlist"}
                       >
@@ -474,8 +474,8 @@ export default function Search() {
                       <button
                         onClick={() => handleOpenRatingModal(movie)}
                         style={{
-                          ...movieCardStyles.actionButton,
-                          ...movieCardStyles.actionButtonPrimary
+                          ...styles.movieCard.actionButton,
+                          ...styles.movieCard.actionButtonPrimary
                         }}
                       >
                         <Star size={14} fill={userRating ? "#f4c96b" : "none"} color="#f4c96b" />
@@ -492,49 +492,49 @@ export default function Search() {
 
       {/* Movie Details Modal */}
       {selectedMovie && (
-        <div style={styles.modalOverlay} onClick={() => setSelectedMovie(null)}>
-          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+        <div style={styles.movieCard.modalOverlay} onClick={() => setSelectedMovie(null)}>
+          <div style={styles.movieCard.modalContent} onClick={(e) => e.stopPropagation()}>
             <button
-              style={styles.modalCloseButton}
+              style={styles.movieCard.modalCloseButton}
               onClick={() => setSelectedMovie(null)}
             >
               <X size={20} />
             </button>
 
-            <div style={styles.modalLayout}>
+            <div style={styles.movieCard.modalLayout}>
               <img
                 src={selectedMovie.poster_path}
                 alt={selectedMovie.title}
-                style={styles.modalPoster}
+                style={styles.movieCard.modalPoster}
               />
-              <div style={styles.modalDetails}>
-                <div style={styles.modalHeaderRow}>
-                  <h2 style={styles.modalTitle}>{selectedMovie.title}</h2>
-                  <span style={styles.modalGenreTag}>{selectedMovie.genre}</span>
+              <div style={styles.movieCard.modalDetails}>
+                <div style={styles.movieCard.modalHeaderRow}>
+                  <h2 style={styles.movieCard.modalTitle}>{selectedMovie.title}</h2>
+                  <span style={styles.movieCard.modalGenreTag}>{selectedMovie.genre}</span>
                 </div>
 
-                <div style={styles.modalMetaRow}>
-                  <div style={styles.modalRatingBox}>
+                <div style={styles.movieCard.modalMetaRow}>
+                  <div style={styles.movieCard.modalRatingBox}>
                     <Star size={18} fill="#f4c96b" color="#f4c96b" />
-                    <span style={styles.modalRatingScore}>
+                    <span style={styles.movieCard.modalRatingScore}>
                       {selectedMovie.vote_average.toFixed(1)}
                     </span>
-                    <span style={styles.modalRatingMax}>/ 10</span>
+                    <span style={styles.movieCard.modalRatingMax}>/ 10</span>
                   </div>
-                  <span style={styles.modalDate}>
+                  <span style={styles.movieCard.modalDate}>
                     Release Date: {selectedMovie.release_date}
                   </span>
                 </div>
 
-                <h4 style={styles.synopsisHeader}>Synopsis</h4>
-                <p style={styles.modalOverview}>{selectedMovie.overview}</p>
+                <h4 style={styles.movieCard.synopsisHeader}>Synopsis</h4>
+                <p style={styles.movieCard.modalOverview}>{selectedMovie.overview}</p>
 
-                <div style={styles.modalActions}>
+                <div style={styles.movieCard.modalActions}>
                   <button
                     onClick={() => handleToggleWatchlist(selectedMovie)}
                     style={{
                       ...styles.modalActionButton,
-                      ...(watchlist[selectedMovie.id] ? movieCardStyles.actionButtonActive : movieCardStyles.actionButtonSecondary)
+                      ...(watchlist[selectedMovie.id] ? styles.movieCard.actionButtonActive : styles.movieCard.actionButtonSecondary)
                     }}
                   >
                     {watchlist[selectedMovie.id] ? (
@@ -556,7 +556,7 @@ export default function Search() {
                     }}
                     style={{
                       ...styles.modalActionButton,
-                      ...movieCardStyles.actionButtonPrimary
+                      ...styles.movieCard.actionButtonPrimary
                     }}
                   >
                     <Star size={16} fill={userRatings[selectedMovie.id] ? "#f4c96b" : "none"} color="#f4c96b" />
@@ -575,31 +575,31 @@ export default function Search() {
 
       {/* Decimal Rating Modal */}
       {activeRatingModal && (
-        <div style={styles.modalOverlay} onClick={() => setActiveRatingModal(null)}>
+        <div style={styles.movieCard.modalOverlay} onClick={() => setActiveRatingModal(null)}>
           <div
-            style={styles.ratingModalContent}
+            style={styles.movieCard.ratingModalContent}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={styles.ratingModalHeader}>
-              <h3 style={styles.ratingModalTitle}>
+            <div style={styles.movieCard.ratingModalHeader}>
+              <h3 style={styles.movieCard.ratingModalTitle}>
                 Rate "{activeRatingModal.title}"
               </h3>
               <button
-                style={styles.modalCloseButton}
+                style={styles.movieCard.modalCloseButton}
                 onClick={() => setActiveRatingModal(null)}
               >
                 <X size={18} />
               </button>
             </div>
-            <p style={styles.ratingModalSubtitle}>
+            <p style={styles.movieCard.ratingModalSubtitle}>
               Enter a decimal rating from 0.0 to 10.0 (e.g. 7.3 or 8.8):
             </p>
 
             <form onSubmit={handleSaveRating}>
               {/* Score Display Card */}
-              <div style={styles.scoreDisplayBox}>
+              <div style={styles.movieCard.scoreDisplayBox}>
                 <Star size={32} fill="#f4c96b" color="#f4c96b" />
-                <span style={styles.scoreDisplayNumber}>
+                <span style={styles.movieCard.scoreDisplayNumber}>
                   {(() => {
                     const parsed = parseFloat(ratingInput);
                     return !isNaN(parsed) && parsed >= 0 && parsed <= 10
@@ -607,12 +607,12 @@ export default function Search() {
                       : "--";
                   })()}
                 </span>
-                <span style={styles.scoreDisplayScale}>/ 10.0</span>
+                <span style={styles.movieCard.scoreDisplayScale}>/ 10.0</span>
               </div>
 
               {/* Decimal Input Box */}
-              <div style={styles.decimalInputContainer}>
-                <label style={styles.decimalInputLabel}>Rating:</label>
+              <div style={styles.movieCard.decimalInputContainer}>
+                <label style={styles.movieCard.decimalInputLabel}>Rating:</label>
                 <input
                   type="number"
                   step="0.1"
@@ -625,12 +625,12 @@ export default function Search() {
                   }}
                   placeholder="e.g. 7.3"
                   autoFocus
-                  style={styles.decimalInput}
+                  style={styles.movieCard.decimalInput}
                 />
               </div>
 
               {/* Smooth Range Slider */}
-              <div style={styles.sliderContainer}>
+              <div style={styles.movieCard.sliderContainer}>
                 <input
                   type="range"
                   min="0"
@@ -644,9 +644,9 @@ export default function Search() {
                     setRatingInput(parseFloat(e.target.value).toFixed(1));
                     setRatingError("");
                   }}
-                  style={styles.rangeSlider}
+                  style={styles.movieCard.rangeSlider}
                 />
-                <div style={styles.sliderTicks}>
+                <div style={styles.movieCard.sliderTicks}>
                   <span>0.0</span>
                   <span>2.5</span>
                   <span>5.0</span>
@@ -656,9 +656,9 @@ export default function Search() {
               </div>
 
               {/* Quick Decimals Presets */}
-              <div style={styles.presetsWrapper}>
-                <span style={styles.presetsLabel}>Quick picks:</span>
-                <div style={styles.presetsGrid}>
+              <div style={styles.movieCard.presetsWrapper}>
+                <span style={styles.movieCard.presetsLabel}>Quick picks:</span>
+                <div style={styles.movieCard.presetsGrid}>
                   {[6.5, 7.3, 7.8, 8.2, 8.8, 9.4].map((preset) => (
                     <button
                       type="button"
@@ -667,7 +667,7 @@ export default function Search() {
                         setRatingInput(preset.toFixed(1));
                         setRatingError("");
                       }}
-                      style={styles.presetButton}
+                      style={styles.movieCard.presetButton}
                     >
                       {preset.toFixed(1)}
                     </button>
@@ -675,15 +675,15 @@ export default function Search() {
                 </div>
               </div>
 
-              {ratingError && <p style={styles.ratingErrorText}>{ratingError}</p>}
+              {ratingError && <p style={styles.movieCard.ratingErrorText}>{ratingError}</p>}
 
               {/* Action Buttons */}
-              <div style={styles.ratingModalActions}>
+              <div style={styles.movieCard.ratingModalActions}>
                 {userRatings[activeRatingModal.id] && (
                   <button
                     type="button"
                     onClick={handleClearRating}
-                    style={styles.clearRatingButton}
+                    style={styles.movieCard.clearRatingButton}
                   >
                     Remove
                   </button>
@@ -691,11 +691,11 @@ export default function Search() {
                 <button
                   type="button"
                   onClick={() => setActiveRatingModal(null)}
-                  style={styles.cancelRatingButton}
+                  style={styles.movieCard.cancelRatingButton}
                 >
                   Cancel
                 </button>
-                <button type="submit" style={styles.saveRatingButton}>
+                <button type="submit" style={styles.movieCard.saveRatingButton}>
                   Save Rating
                 </button>
               </div>

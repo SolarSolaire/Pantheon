@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Film, Lock, User, UserPlus, Sparkles, ArrowLeft } from "lucide-react";
 import api from "../api/axios";
-import { newAccountStyles as styles } from "../sharedStyles.jsx";
+import styles from "../styles.jsx";
 
 export default function NewAccount() {
   // variable declaration
@@ -37,72 +37,72 @@ export default function NewAccount() {
   };
 
   return (
-    <div style={styles.page}>
+    <div style={styles.auth.authPage}>
       {/* Split-screen container */}
-      <div style={styles.card}>
+      <div style={styles.auth.authCard}>
         {/* Left Side - Pantheon Branding & Gateway Welcome */}
-        <div style={styles.brandSide}>
-          <div style={styles.brandContent}>
-            <div style={styles.logoRow}>
+        <div style={styles.auth.authBrandSide}>
+          <div style={styles.auth.authBrandContent}>
+            <div style={styles.auth.authLogoRow}>
               <Film size={36} color="#f4c96b" />
-              <span style={styles.logoText}>PANTHEON</span>
+              <span style={styles.auth.authLogoText}>PANTHEON</span>
             </div>
-            <h1 style={styles.brandTitle}>Join the Pantheon</h1>
-            <p style={styles.brandSubtitle}>
+            <h1 style={styles.auth.authBrandTitle}>Join the Pantheon</h1>
+            <p style={styles.auth.authBrandSubtitle}>
               Create your profile to curate your personal movie database, review films, and maintain your watchlist.
             </p>
           </div>
-          <div style={styles.brandFooter}>
+          <div style={styles.auth.authBrandFooter}>
             <Sparkles size={16} color="#f4c96b" />
             <span>Instant access upon registration</span>
           </div>
         </div>
 
         {/* Right Side - Registration Form & Actions */}
-        <div style={styles.formSide}>
-          <div style={styles.formHeader}>
-            <h2 style={styles.formTitle}>Create Account</h2>
-            <p style={styles.formSubtitle}>Sign up for a free Pantheon account</p>
+        <div style={styles.auth.authFormSide}>
+          <div style={styles.auth.authFormHeader}>
+            <h2 style={styles.auth.authFormTitle}>Create Account</h2>
+            <p style={styles.auth.authFormSubtitle}>Sign up for a free Pantheon account</p>
           </div>
 
-          {error && <div style={styles.errorBanner}>{error}</div>}
+          {error && <div style={styles.auth.authErrorBanner}>{error}</div>}
 
-          <form onSubmit={handleRegister} style={styles.form}>
-            <div style={styles.inputGroup}>
-              <User size={18} color="#85818d" style={styles.inputIcon} />
+          <form onSubmit={handleRegister} style={styles.auth.authForm}>
+            <div style={styles.auth.authInputGroup}>
+              <User size={18} color="#85818d" style={styles.auth.authInputIcon} />
               <input
                 type="text"
                 placeholder="Choose Username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                style={styles.input}
+                style={styles.auth.authInput}
                 required
               />
             </div>
 
-            <div style={styles.inputGroup}>
-              <Lock size={18} color="#85818d" style={styles.inputIcon} />
+            <div style={styles.auth.authInputGroup}>
+              <Lock size={18} color="#85818d" style={styles.auth.authInputIcon} />
               <input
                 type="password"
                 placeholder="Choose Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                style={styles.input}
+                style={styles.auth.authInput}
                 required
               />
             </div>
 
-            <button type="submit" style={styles.primaryBtn} disabled={loading}>
+            <button type="submit" style={styles.auth.authPrimaryButton} disabled={loading}>
               <UserPlus size={18} />
               {loading ? "Creating Account..." : "Sign Up"}
             </button>
           </form>
 
           {/* Navigation link to Login */}
-          <div style={styles.actionRow}>
+          <div style={styles.auth.newAccountActionRow}>
             <button
               type="button"
-              style={styles.secondaryBtn}
+              style={styles.auth.secondaryBtn}
               onClick={() => navigate("/login")}
             >
               <ArrowLeft size={16} />
