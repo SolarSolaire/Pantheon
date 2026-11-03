@@ -1,23 +1,19 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import styles from "../styles.jsx";
+import { loadUserWatchlist, saveUserWatchlist } from "../utils/watchlist";
+import { MovieDetailsDialog } from "../components/MovieCard";
+import MovieGrid from "../components/MovieGrid";
+import SearchBar from "../components/SearchBar";
+import Navbar from "../components/Navbar";
+import { fetchTrendingMovies, searchMovies } from "../api/tmdb";
 import {
-  Search as SearchIcon,
-  Star,
-  Bookmark,
-  Check,
   Film,
   SlidersHorizontal,
-  ArrowLeft,
-  X,
-  Calendar,
   Sparkles,
-  Info
 } from "lucide-react";
-// When the backend search endpoint is connected, import api:
-// import api from "../api/axios";
 
-// Standard mock movies matching TMDB API response format
+/*
 const MOCK_MOVIES = [
   {
     id: 27205,
@@ -100,21 +96,74 @@ const MOCK_MOVIES = [
       "Teenager Miles Morales becomes the new Spider-Man and must join forces with five other spider-powered individuals from other dimensions to stop a threat to all realities."
   }
 ];
+*/
 
 const GENRES = ["All", "Sci-Fi", "Action", "Animation", "Crime", "Drama"];
+const GENRE_IDS = {
+  "Sci-Fi": 878,
+  Action: 28,
+  Animation: 16,
+  Crime: 80,
+  Drama: 18
+};
 
 export default function Search() {
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchParams] = useSearchParams();
+  const [searchQuery, setSearchQuery] = useState(() => searchParams.get("query") || "");
   const [selectedGenre, setSelectedGenre] = useState("All");
   const [sortBy, setSortBy] = useState("rating-desc");
-  const [watchlist, setWatchlist] = useState({});
+  const [watchlist, setWatchlist] = useState([]);
+  const [watchlistError, setWatchlistError] = useState("");
   const [userRatings, setUserRatings] = useState({});
   const [selectedMovie, setSelectedMovie] = useState(null);
-  const [activeRatingModal, setActiveRatingModal] = useState(null);
-  const [ratingInput, setRatingInput] = useState("");
-  const [ratingError, setRatingError] = useState("");
   const [isSignedIn, setIsSignedIn] = useState(() => detectSignedIn());
+  const [movies, setMovies] = useState([]);
+  const [moviesLoading, setMoviesLoading] = useState(true);
+  const [moviesError, setMoviesError] = useState("");
+
+  useEffect(() => {
+    setSearchQuery(searchParams.get("query") || "");
+  }, [searchParams]);
+
+  useEffect(() => {
+    const query = searchQuery.trim();
+    const controller = new AbortController();
+    let timeout;
+
+    async function loadMovies() {
+      setMoviesLoading(true);
+      setMoviesError("");
+      try {
+        const results = query
+          ? await searchMovies(query, controller.signal)
+          : await fetchTrendingMovies(controller.signal);
+        setMovies(results);
+      } catch (err) {
+        if (!controller.signal.aborted) {
+          setMovies([]);
+          setMoviesError(
+            err.response?.data?.message ||
+              err.message ||
+              "Could not load movies from TMDB."
+          );
+        }
+      } finally {
+        if (!controller.signal.aborted) setMoviesLoading(false);
+      }
+    }
+
+    if (query) {
+      timeout = setTimeout(loadMovies, 250);
+    } else {
+      loadMovies();
+    }
+
+    return () => {
+      clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [searchQuery]);
 
   function detectSignedIn() {
     const authKeys = [
@@ -158,6 +207,14 @@ export default function Search() {
     };
   }, []);
 
+  useEffect(() => {
+    try {
+      setWatchlist(loadUserWatchlist());
+    } catch (err) {
+      setWatchlistError(err.message || "Could not load your watchlist.");
+    }
+  }, []);
+
   function handleAuthAction() {
     if (!isSignedIn) {
       navigate("/login");
@@ -183,66 +240,41 @@ export default function Search() {
 
   // Toggle watchlist state
   const handleToggleWatchlist = (movie) => {
-    setWatchlist((prev) => ({
-      ...prev,
-      [movie.id]: !prev[movie.id]
-    }));
-  };
-
-  // Open decimal rating modal
-  const handleOpenRatingModal = (movie) => {
-    setActiveRatingModal(movie);
-    setRatingInput(userRatings[movie.id] ? String(userRatings[movie.id]) : "8.0");
-    setRatingError("");
-  };
-
-  // Save decimal rating (formatted to 1 decimal place)
-  const handleSaveRating = (e) => {
-    if (e) e.preventDefault();
-    const val = parseFloat(ratingInput);
-    if (isNaN(val) || val < 0 || val > 10) {
-      setRatingError("Please enter a rating between 0.0 and 10.0");
-      return;
+    const isInWatchlist = watchlist.some((item) => item.id === movie.id);
+    const updatedWatchlist = isInWatchlist
+      ? watchlist.filter((item) => item.id !== movie.id)
+      : [...watchlist, movie];
+    try {
+      saveUserWatchlist(updatedWatchlist);
+      setWatchlist(updatedWatchlist);
+      setWatchlistError("");
+    } catch (err) {
+      setWatchlistError(err.message || "Could not save your watchlist.");
     }
-    const formatted = val.toFixed(1);
+  };
+
+  const handleSaveRating = (movie, rating) => {
     setUserRatings((prev) => ({
       ...prev,
-      [activeRatingModal.id]: formatted
+      [movie.id]: rating
     }));
-    setActiveRatingModal(null);
   };
 
-  // Clear rating
-  const handleClearRating = () => {
+  const handleClearRating = (movie) => {
     setUserRatings((prev) => {
       const updated = { ...prev };
-      delete updated[activeRatingModal.id];
+      delete updated[movie.id];
       return updated;
     });
-    setActiveRatingModal(null);
   };
 
-  // Filter and sort movies
   const filteredMovies = useMemo(() => {
-    let list = [...MOCK_MOVIES];
-
-    // Filter by search query
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      list = list.filter(
-        (m) =>
-          m.title.toLowerCase().includes(q) ||
-          m.overview.toLowerCase().includes(q) ||
-          m.genre.toLowerCase().includes(q)
-      );
-    }
-
-    // Filter by genre
+    let list = [...movies];
     if (selectedGenre !== "All") {
-      list = list.filter((m) => m.genre === selectedGenre);
+      const genreId = GENRE_IDS[selectedGenre];
+      list = list.filter((movie) => movie.genre_ids?.includes(genreId));
     }
 
-    // Sort list
     list.sort((a, b) => {
       if (sortBy === "rating-desc") return b.vote_average - a.vote_average;
       if (sortBy === "rating-asc") return a.vote_average - b.vote_average;
@@ -255,36 +287,26 @@ export default function Search() {
     });
 
     return list;
-  }, [searchQuery, selectedGenre, sortBy]);
+  }, [movies, selectedGenre, sortBy]);
 
   return (
     <div>
-      {/* Top Navigation Bar */}
-      <header style={styles.search.navBar}>
-        <a className="logo" href="#" onClick={(e) => { e.preventDefault(); navigate("/home"); }} style={styles.search.navBrand}>
-          <Film size={22} color="#f4c96b" />
-          <span>Pantheon</span>
-        </a>
-        <div style={styles.search.navActions}>
-          <button
-            type="button"
-            style={styles.shared.navButton}
-            onClick={() => navigate("/profile")}
-          >
-            Account
-          </button>
-          <button
-            type="button"
-            style={styles.shared.navButton}
-            onClick={handleAuthAction}
-          >
-            Logout
-          </button>
-        </div>
-      </header>
+      <Navbar
+        showSearch={false}
+        actions={[
+          { label: "Watchlist", onClick: () => navigate("/watchlist") },
+          { label: "Account", onClick: () => navigate("/profile") },
+          { label: "Logout", onClick: handleAuthAction }
+        ]}
+      />
 
       {/* Main Content Area */}
       <main style={styles.shared.container}>
+        {watchlistError && (
+          <div style={{ ...styles.home.statusMessage, ...styles.home.errorMessage }}>
+            {watchlistError}
+          </div>
+        )}
         {/* Search Header Banner */}
         <section style={styles.search.heroSection}>
           <h1 style={styles.search.heroTitle}>Discover & Track Movies</h1>
@@ -293,25 +315,12 @@ export default function Search() {
           </p>
 
           {/* Search Bar Input */}
-          <div style={styles.search.searchBarWrapper}>
-            <SearchIcon size={20} color="#85818d" style={styles.search.searchIcon} />
-            <input
-              type="text"
-              placeholder="Search by title, overview, or genre..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={styles.search.searchInput}
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                style={styles.search.clearButton}
-                title="Clear search"
-              >
-                <X size={18} />
-              </button>
-            )}
-          </div>
+          <SearchBar
+            mode="hero"
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Search by title, overview, or genre..."
+          />
 
           {/* Genre Filters & Sorting */}
           <div style={styles.search.filterBar}>
@@ -357,17 +366,23 @@ export default function Search() {
           </p>
           <div style={styles.search.apiNotice}>
             <Sparkles size={14} color="#f4c96b" />
-            <span>Mock catalog active — ready for API connection</span>
+            <span>Movie data provided by TMDB</span>
           </div>
         </div>
 
         {/* Movies Grid */}
-        {filteredMovies.length === 0 ? (
+        {moviesLoading ? (
+          <div style={styles.home.statusMessage}>Loading movies...</div>
+        ) : moviesError ? (
+          <div style={{ ...styles.home.statusMessage, ...styles.home.errorMessage }}>
+            {moviesError}
+          </div>
+        ) : filteredMovies.length === 0 ? (
           <div style={styles.search.emptyState}>
             <Film size={48} color="#85818d" />
             <h3 style={styles.search.emptyTitle}>No movies found</h3>
             <p style={styles.search.emptySubtitle}>
-              Try searching with a different title or clearing your genre filter.
+              Try a different search or clear the selected genre filter.
             </p>
             <button
               onClick={() => {
@@ -380,328 +395,28 @@ export default function Search() {
             </button>
           </div>
         ) : (
-          <div style={styles.shared.grid}>
-            {filteredMovies.map((movie) => {
-              const inWatchlist = !!watchlist[movie.id];
-              const userRating = userRatings[movie.id];
-              const releaseYear = movie.release_date
-                ? movie.release_date.split("-")[0]
-                : "N/A";
-
-              return (
-                <article key={movie.id} style={styles.movieCard.movieCard}>
-                  {/* Poster Thumbnail */}
-                  <div
-                    style={styles.movieCard.posterContainer}
-                    onClick={() => setSelectedMovie(movie)}
-                  >
-                    <img
-                      src={movie.poster_path}
-                      alt={movie.title}
-                      style={styles.movieCard.posterImage}
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=500&auto=format&fit=crop&q=60";
-                      }}
-                    />
-                    <div style={styles.movieCard.posterOverlay}>
-                      <span style={styles.movieCard.quickViewText}>
-                        <Info size={14} /> View Details
-                      </span>
-                    </div>
-
-                    {/* Score badge */}
-                    <div style={styles.movieCard.ratingBadge}>
-                      <Star size={13} fill="#f4c96b" color="#f4c96b" />
-                      <span>{movie.vote_average.toFixed(1)}</span>
-                    </div>
-
-                    {/* Genre pill badge */}
-                    <div style={styles.movieCard.genreBadge}>{movie.genre}</div>
-                  </div>
-
-                  {/* Card Content */}
-                  <div style={styles.movieCard.cardBody}>
-                    <div style={styles.movieCard.cardHeader}>
-                      <h2
-                        style={styles.movieCard.movieTitle}
-                        title={movie.title}
-                        onClick={() => setSelectedMovie(movie)}
-                      >
-                        {movie.title}
-                      </h2>
-                      <div style={styles.movieCard.movieMeta}>
-                        <Calendar size={13} color="#85818d" />
-                        <span>{releaseYear}</span>
-                      </div>
-                    </div>
-
-                    <p style={styles.movieCard.overviewText}>
-                      {movie.overview}
-                    </p>
-
-                    {/* User Rating Indicator (if rated) */}
-                    {userRating && (
-                      <div style={styles.movieCard.userRatedBar}>
-                        <Star size={13} fill="#f4c96b" color="#f4c96b" />
-                        <span>Your rating: <strong>{userRating} / 10</strong></span>
-                      </div>
-                    )}
-
-                    {/* Action Buttons */}
-                    <div style={styles.movieCard.cardActions}>
-                      <button
-                        onClick={() => handleToggleWatchlist(movie)}
-                        style={{
-                          ...styles.movieCard.actionButton,
-                          ...(inWatchlist ? styles.movieCard.actionButtonActive : styles.movieCard.actionButtonSecondary)
-                        }}
-                        title={inWatchlist ? "Remove from watchlist" : "Add to watchlist"}
-                      >
-                        {inWatchlist ? (
-                          <>
-                            <Check size={14} color="#10b981" />
-                            <span style={{ color: "#10b981" }}>In Watchlist</span>
-                          </>
-                        ) : (
-                          <>
-                            <Bookmark size={14} />
-                            <span>Watchlist</span>
-                          </>
-                        )}
-                      </button>
-
-                      <button
-                        onClick={() => handleOpenRatingModal(movie)}
-                        style={{
-                          ...styles.movieCard.actionButton,
-                          ...styles.movieCard.actionButtonPrimary
-                        }}
-                      >
-                        <Star size={14} fill={userRating ? "#f4c96b" : "none"} color="#f4c96b" />
-                        <span>{userRating ? `${userRating} ★` : "Rate"}</span>
-                      </button>
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
+          <MovieGrid
+            movies={filteredMovies}
+            userRatings={userRatings}
+            watchlist={watchlist}
+            onSelect={setSelectedMovie}
+            onToggleWatchlist={handleToggleWatchlist}
+            onSaveRating={handleSaveRating}
+            onClearRating={handleClearRating}
+          />
         )}
       </main>
 
-      {/* Movie Details Modal */}
       {selectedMovie && (
-        <div style={styles.movieCard.modalOverlay} onClick={() => setSelectedMovie(null)}>
-          <div style={styles.movieCard.modalContent} onClick={(e) => e.stopPropagation()}>
-            <button
-              style={styles.movieCard.modalCloseButton}
-              onClick={() => setSelectedMovie(null)}
-            >
-              <X size={20} />
-            </button>
-
-            <div style={styles.movieCard.modalLayout}>
-              <img
-                src={selectedMovie.poster_path}
-                alt={selectedMovie.title}
-                style={styles.movieCard.modalPoster}
-              />
-              <div style={styles.movieCard.modalDetails}>
-                <div style={styles.movieCard.modalHeaderRow}>
-                  <h2 style={styles.movieCard.modalTitle}>{selectedMovie.title}</h2>
-                  <span style={styles.movieCard.modalGenreTag}>{selectedMovie.genre}</span>
-                </div>
-
-                <div style={styles.movieCard.modalMetaRow}>
-                  <div style={styles.movieCard.modalRatingBox}>
-                    <Star size={18} fill="#f4c96b" color="#f4c96b" />
-                    <span style={styles.movieCard.modalRatingScore}>
-                      {selectedMovie.vote_average.toFixed(1)}
-                    </span>
-                    <span style={styles.movieCard.modalRatingMax}>/ 10</span>
-                  </div>
-                  <span style={styles.movieCard.modalDate}>
-                    Release Date: {selectedMovie.release_date}
-                  </span>
-                </div>
-
-                <h4 style={styles.movieCard.synopsisHeader}>Synopsis</h4>
-                <p style={styles.movieCard.modalOverview}>{selectedMovie.overview}</p>
-
-                <div style={styles.movieCard.modalActions}>
-                  <button
-                    onClick={() => handleToggleWatchlist(selectedMovie)}
-                    style={{
-                      ...styles.modalActionButton,
-                      ...(watchlist[selectedMovie.id] ? styles.movieCard.actionButtonActive : styles.movieCard.actionButtonSecondary)
-                    }}
-                  >
-                    {watchlist[selectedMovie.id] ? (
-                      <>
-                        <Check size={16} color="#10b981" />
-                        <span style={{ color: "#10b981" }}>Saved in Watchlist</span>
-                      </>
-                    ) : (
-                      <>
-                        <Bookmark size={16} />
-                        <span>Add to Watchlist</span>
-                      </>
-                    )}
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      handleOpenRatingModal(selectedMovie);
-                    }}
-                    style={{
-                      ...styles.modalActionButton,
-                      ...styles.movieCard.actionButtonPrimary
-                    }}
-                  >
-                    <Star size={16} fill={userRatings[selectedMovie.id] ? "#f4c96b" : "none"} color="#f4c96b" />
-                    <span>
-                      {userRatings[selectedMovie.id]
-                        ? `Your Rating: ${userRatings[selectedMovie.id]}/10`
-                        : "Rate this Movie"}
-                    </span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Decimal Rating Modal */}
-      {activeRatingModal && (
-        <div style={styles.movieCard.modalOverlay} onClick={() => setActiveRatingModal(null)}>
-          <div
-            style={styles.movieCard.ratingModalContent}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={styles.movieCard.ratingModalHeader}>
-              <h3 style={styles.movieCard.ratingModalTitle}>
-                Rate "{activeRatingModal.title}"
-              </h3>
-              <button
-                style={styles.movieCard.modalCloseButton}
-                onClick={() => setActiveRatingModal(null)}
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <p style={styles.movieCard.ratingModalSubtitle}>
-              Enter a decimal rating from 0.0 to 10.0 (e.g. 7.3 or 8.8):
-            </p>
-
-            <form onSubmit={handleSaveRating}>
-              {/* Score Display Card */}
-              <div style={styles.movieCard.scoreDisplayBox}>
-                <Star size={32} fill="#f4c96b" color="#f4c96b" />
-                <span style={styles.movieCard.scoreDisplayNumber}>
-                  {(() => {
-                    const parsed = parseFloat(ratingInput);
-                    return !isNaN(parsed) && parsed >= 0 && parsed <= 10
-                      ? parsed.toFixed(1)
-                      : "--";
-                  })()}
-                </span>
-                <span style={styles.movieCard.scoreDisplayScale}>/ 10.0</span>
-              </div>
-
-              {/* Decimal Input Box */}
-              <div style={styles.movieCard.decimalInputContainer}>
-                <label style={styles.movieCard.decimalInputLabel}>Rating:</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  max="10"
-                  value={ratingInput}
-                  onChange={(e) => {
-                    setRatingInput(e.target.value);
-                    setRatingError("");
-                  }}
-                  placeholder="e.g. 7.3"
-                  autoFocus
-                  style={styles.movieCard.decimalInput}
-                />
-              </div>
-
-              {/* Smooth Range Slider */}
-              <div style={styles.movieCard.sliderContainer}>
-                <input
-                  type="range"
-                  min="0"
-                  max="10"
-                  step="0.1"
-                  value={(() => {
-                    const p = parseFloat(ratingInput);
-                    return isNaN(p) ? 7.0 : Math.min(10, Math.max(0, p));
-                  })()}
-                  onChange={(e) => {
-                    setRatingInput(parseFloat(e.target.value).toFixed(1));
-                    setRatingError("");
-                  }}
-                  style={styles.movieCard.rangeSlider}
-                />
-                <div style={styles.movieCard.sliderTicks}>
-                  <span>0.0</span>
-                  <span>2.5</span>
-                  <span>5.0</span>
-                  <span>7.5</span>
-                  <span>10.0</span>
-                </div>
-              </div>
-
-              {/* Quick Decimals Presets */}
-              <div style={styles.movieCard.presetsWrapper}>
-                <span style={styles.movieCard.presetsLabel}>Quick picks:</span>
-                <div style={styles.movieCard.presetsGrid}>
-                  {[6.5, 7.3, 7.8, 8.2, 8.8, 9.4].map((preset) => (
-                    <button
-                      type="button"
-                      key={preset}
-                      onClick={() => {
-                        setRatingInput(preset.toFixed(1));
-                        setRatingError("");
-                      }}
-                      style={styles.movieCard.presetButton}
-                    >
-                      {preset.toFixed(1)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {ratingError && <p style={styles.movieCard.ratingErrorText}>{ratingError}</p>}
-
-              {/* Action Buttons */}
-              <div style={styles.movieCard.ratingModalActions}>
-                {userRatings[activeRatingModal.id] && (
-                  <button
-                    type="button"
-                    onClick={handleClearRating}
-                    style={styles.movieCard.clearRatingButton}
-                  >
-                    Remove
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setActiveRatingModal(null)}
-                  style={styles.movieCard.cancelRatingButton}
-                >
-                  Cancel
-                </button>
-                <button type="submit" style={styles.movieCard.saveRatingButton}>
-                  Save Rating
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <MovieDetailsDialog
+          movie={selectedMovie}
+          userRating={userRatings[selectedMovie.id] || selectedMovie.user_rating}
+          isInWatchlist={watchlist.some((item) => item.id === selectedMovie.id)}
+          onToggleWatchlist={handleToggleWatchlist}
+          onSaveRating={handleSaveRating}
+          onClearRating={handleClearRating}
+          onClose={() => setSelectedMovie(null)}
+        />
       )}
     </div>
   );
