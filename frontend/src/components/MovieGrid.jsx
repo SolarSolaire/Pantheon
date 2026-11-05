@@ -11,22 +11,22 @@ export default function MovieGrid({
   onSaveRating,
   onClearRating,
   onRemove,
-  missingYearLabel
+  gridStyle,
+  gridRef
 }) {
   return (
-    <div style={styles.shared.grid}>
+    <div ref={gridRef} style={{ ...styles.shared.grid, ...gridStyle }}>
       {movies.map((movie) => (
         <MovieCard
           key={movie.id}
           movie={movie}
-          userRating={userRatings[movie.id] ?? movie.user_rating}
+          userRating={userRatings[movie.id]}
           isInWatchlist={watchlist.some((item) => item.id === movie.id)}
           onSelect={onSelect}
           onToggleWatchlist={onToggleWatchlist}
           onSaveRating={onSaveRating}
           onClearRating={onClearRating}
           onRemove={onRemove}
-          missingYearLabel={missingYearLabel}
         />
       ))}
     </div>

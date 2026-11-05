@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Bookmark } from "lucide-react";
 import { clearAuthentication } from "../utils/auth";
 import { loadUserWatchlist, saveUserWatchlist } from "../utils/watchlist";
+import useUserRatings from "../hooks/useUserRatings";
 import MovieGrid from "../components/MovieGrid";
 import Navbar from "../components/Navbar";
 
@@ -66,14 +67,24 @@ export default function Watchlist() {
   const [movies, setMovies] = useState([]);
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
+  const { userRatings, ratingsError, handleSaveRating, handleClearRating, mergeRatings } =
+    useUserRatings();
 
   useEffect(() => {
     try {
-      setMovies(loadUserWatchlist());
+      const loadedMovies = loadUserWatchlist();
+      setMovies(loadedMovies);
+      mergeRatings(
+        Object.fromEntries(
+          loadedMovies
+            .filter((movie) => movie.user_rating != null)
+            .map((movie) => [movie.id, movie.user_rating])
+        )
+      );
     } catch (err) {
       setError(err.message || "Could not load your watchlist.");
     }
-  }, []);
+  }, [mergeRatings]);
 
   function handleSearchSubmit(event) {
     event.preventDefault();
@@ -90,32 +101,6 @@ export default function Watchlist() {
     } catch (err) {
       setError(err.message || "Could not update your watchlist.");
     }
-  }
-
-  function updateMovieRating(updatedMovies, errorMessage) {
-    try {
-      saveUserWatchlist(updatedMovies);
-      setMovies(updatedMovies);
-      setError("");
-    } catch (err) {
-      setError(err.message || errorMessage);
-    }
-  }
-
-  function handleSaveRating(movie, rating) {
-    const updatedMovies = movies.map((item) =>
-      item.id === movie.id ? { ...item, user_rating: rating } : item
-    );
-    updateMovieRating(updatedMovies, "Could not save your rating.");
-  }
-
-  function handleClearRating(ratedMovie) {
-    const updatedMovies = movies.map((movie) => {
-      if (movie.id !== ratedMovie.id) return movie;
-      const { user_rating, ...movieWithoutRating } = movie;
-      return movieWithoutRating;
-    });
-    updateMovieRating(updatedMovies, "Could not clear your rating.");
   }
 
   function handleLogout() {
@@ -149,6 +134,16 @@ export default function Watchlist() {
             {error}
           </div>
         )}
+        {ratingsError && (
+          <div
+            style={{
+              ...watchlistStyles.statusMessage,
+              ...watchlistStyles.errorMessage
+            }}
+          >
+            {ratingsError}
+          </div>
+        )}
 
         {!error && movies.length === 0 && (
           <div style={watchlistStyles.emptyState}>
@@ -170,10 +165,10 @@ export default function Watchlist() {
         {movies.length > 0 && (
           <MovieGrid
             movies={movies}
+            userRatings={userRatings}
             onSaveRating={handleSaveRating}
             onClearRating={handleClearRating}
             onRemove={(movie) => handleRemoveMovie(movie.id)}
-            missingYearLabel="Year unknown"
           />
         )}
       </main>

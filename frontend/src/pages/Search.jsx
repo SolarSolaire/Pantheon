@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import styles from "../styles.jsx";
 import { loadUserWatchlist, saveUserWatchlist } from "../utils/watchlist";
+import useUserRatings from "../hooks/useUserRatings";
 import { MovieDetailsDialog } from "../components/MovieCard";
 import MovieGrid from "../components/MovieGrid";
 import SearchBar from "../components/SearchBar";
@@ -115,7 +116,8 @@ export default function Search() {
   const [sortBy, setSortBy] = useState("rating-desc");
   const [watchlist, setWatchlist] = useState([]);
   const [watchlistError, setWatchlistError] = useState("");
-  const [userRatings, setUserRatings] = useState({});
+  const { userRatings, ratingsError, handleSaveRating, handleClearRating } =
+    useUserRatings();
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [isSignedIn, setIsSignedIn] = useState(() => detectSignedIn());
   const [movies, setMovies] = useState([]);
@@ -253,21 +255,6 @@ export default function Search() {
     }
   };
 
-  const handleSaveRating = (movie, rating) => {
-    setUserRatings((prev) => ({
-      ...prev,
-      [movie.id]: rating
-    }));
-  };
-
-  const handleClearRating = (movie) => {
-    setUserRatings((prev) => {
-      const updated = { ...prev };
-      delete updated[movie.id];
-      return updated;
-    });
-  };
-
   const filteredMovies = useMemo(() => {
     let list = [...movies];
     if (selectedGenre !== "All") {
@@ -305,6 +292,11 @@ export default function Search() {
         {watchlistError && (
           <div style={{ ...styles.home.statusMessage, ...styles.home.errorMessage }}>
             {watchlistError}
+          </div>
+        )}
+        {ratingsError && (
+          <div style={{ ...styles.home.statusMessage, ...styles.home.errorMessage }}>
+            {ratingsError}
           </div>
         )}
         {/* Search Header Banner */}
@@ -410,7 +402,7 @@ export default function Search() {
       {selectedMovie && (
         <MovieDetailsDialog
           movie={selectedMovie}
-          userRating={userRatings[selectedMovie.id] || selectedMovie.user_rating}
+          userRating={userRatings[selectedMovie.id]}
           isInWatchlist={watchlist.some((item) => item.id === selectedMovie.id)}
           onToggleWatchlist={handleToggleWatchlist}
           onSaveRating={handleSaveRating}

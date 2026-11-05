@@ -2,11 +2,23 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { clearAuthentication, isAuthenticated } from "../utils/auth";
 import { loadUserWatchlist, saveUserWatchlist } from "../utils/watchlist";
+import useUserRatings from "../hooks/useUserRatings";
 import { MovieDetailsDialog } from "../components/MovieCard";
-import FeaturedMovies from "../components/FeaturedMovies";
+import MovieCarousel from "../components/MovieCarousel";
 import Navbar from "../components/Navbar";
-import { fetchTrendingMovies, searchMovies } from "../api/tmdb";
+import {
+  fetchNowPlayingMovies,
+  fetchTrendingMovies,
+  fetchUpcomingMovies,
+  searchMovies
+} from "../api/tmdb";
 import styles from "../styles.jsx";
+
+const HOME_SECTIONS = [
+  { key: "trending", title: "Trending", fetchMovies: fetchTrendingMovies },
+  { key: "upcoming", title: "Upcoming", fetchMovies: fetchUpcomingMovies },
+  { key: "nowPlaying", title: "Now Playing", fetchMovies: fetchNowPlayingMovies }
+];
 
 function getTmdbErrorMessage(error, fallback) {
   if (error.response?.data?.message) return error.response.data.message;
@@ -16,18 +28,24 @@ function getTmdbErrorMessage(error, fallback) {
 
 export default function Home() {
   const navigate = useNavigate();
-  const [movies, setMovies] = useState([]);
+  const [movieSections, setMovieSections] = useState(() =>
+    Object.fromEntries(
+      HOME_SECTIONS.map(({ key }) => [
+        key,
+        { movies: [], loading: true, error: "" }
+      ])
+    )
+  );
   const [watchlist, setWatchlist] = useState([]);
   const [watchlistError, setWatchlistError] = useState("");
-  const [userRatings, setUserRatings] = useState({});
+  const { userRatings, ratingsError, handleSaveRating, handleClearRating } =
+    useUserRatings();
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [search, setSearch] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const [suggestionsError, setSuggestionsError] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
   useEffect(() => {
     const redirectIfSignedOut = () => {
@@ -59,21 +77,28 @@ export default function Home() {
   useEffect(() => {
     const controller = new AbortController();
 
-    async function fetchPopularMovies() {
-      setLoading(true);
-      setError("");
+    HOME_SECTIONS.forEach(async ({ key, fetchMovies }) => {
       try {
-        setMovies(await fetchTrendingMovies(controller.signal));
+        const movies = await fetchMovies(controller.signal);
+        if (!controller.signal.aborted) {
+          setMovieSections((previous) => ({
+            ...previous,
+            [key]: { movies, loading: false, error: "" }
+          }));
+        }
       } catch (err) {
         if (!controller.signal.aborted) {
-          setError(getTmdbErrorMessage(err, "Failed to load movies."));
+          setMovieSections((previous) => ({
+            ...previous,
+            [key]: {
+              movies: [],
+              loading: false,
+              error: getTmdbErrorMessage(err, "Failed to load movies.")
+            }
+          }));
         }
-      } finally {
-        if (!controller.signal.aborted) setLoading(false);
       }
-    }
-
-    fetchPopularMovies();
+    });
     return () => controller.abort();
   }, []);
 
@@ -140,21 +165,6 @@ export default function Home() {
     }
   }
 
-  function handleSaveRating(movie, rating) {
-    setUserRatings((previous) => ({
-      ...previous,
-      [movie.id]: rating
-    }));
-  }
-
-  function handleClearRating(movie) {
-    setUserRatings((previous) => {
-      const updatedRatings = { ...previous };
-      delete updatedRatings[movie.id];
-      return updatedRatings;
-    });
-  }
-
   return (
     <div>
       <Navbar
@@ -183,24 +193,56 @@ export default function Home() {
       />
 
       <main style={styles.shared.container}>
-        <FeaturedMovies
-          movies={movies}
-          loading={loading}
-          error={error}
-          watchlist={watchlist}
-          watchlistError={watchlistError}
-          userRatings={userRatings}
-          onSelectMovie={setSelectedMovie}
-          onToggleWatchlist={handleToggleWatchlist}
-          onSaveRating={handleSaveRating}
-          onClearRating={handleClearRating}
-        />
+        {watchlistError && (
+          <div style={{ ...styles.home.statusMessage, ...styles.home.errorMessage }}>
+            {watchlistError}
+          </div>
+        )}
+        {ratingsError && (
+          <div style={{ ...styles.home.statusMessage, ...styles.home.errorMessage }}>
+            {ratingsError}
+          </div>
+        )}
+
+        {HOME_SECTIONS.map(({ key, title }) => {
+          const section = movieSections[key];
+          return (
+            <section key={key} style={styles.home.movieSection}>
+              <h2 style={styles.home.sectionTitle}>{title}</h2>
+              {section.loading && (
+                <div style={styles.home.statusMessage}>
+                  Loading {title.toLowerCase()} movies...
+                </div>
+              )}
+              {!section.loading && section.error && (
+                <div style={{ ...styles.home.statusMessage, ...styles.home.errorMessage }}>
+                  {section.error}
+                </div>
+              )}
+              {!section.loading && !section.error && section.movies.length > 0 && (
+                <MovieCarousel
+                  label={title}
+                  movies={section.movies}
+                  userRatings={userRatings}
+                  watchlist={watchlist}
+                  onSelect={setSelectedMovie}
+                  onToggleWatchlist={handleToggleWatchlist}
+                  onSaveRating={handleSaveRating}
+                  onClearRating={handleClearRating}
+                />
+              )}
+              {!section.loading && !section.error && section.movies.length === 0 && (
+                <div style={styles.home.statusMessage}>No movies available.</div>
+              )}
+            </section>
+          );
+        })}
       </main>
 
       {selectedMovie && (
         <MovieDetailsDialog
           movie={selectedMovie}
-          userRating={userRatings[selectedMovie.id] || selectedMovie.user_rating}
+          userRating={userRatings[selectedMovie.id]}
           isInWatchlist={watchlist.some((item) => item.id === selectedMovie.id)}
           onToggleWatchlist={handleToggleWatchlist}
           onSaveRating={handleSaveRating}

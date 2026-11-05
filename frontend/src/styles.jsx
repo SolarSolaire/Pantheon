@@ -250,6 +250,43 @@ const styles = {
       fontSize: "clamp(1.7rem, 3vw, 2.35rem)",
       letterSpacing: "-0.04em"
     },
+    movieSection: {
+      marginBottom: "56px"
+    },
+    carouselFrame: {
+      position: "relative"
+    },
+    carousel: {
+      gridAutoFlow: "column",
+      gridAutoColumns: "clamp(145px, 16vw, 185px)",
+      gridTemplateColumns: "none",
+      overflowX: "auto",
+      scrollSnapType: "x mandatory",
+      scrollBehavior: "smooth",
+      scrollPadding: "8px 12px",
+      scrollbarWidth: "none",
+      padding: "12px"
+    },
+    carouselArrow: {
+      position: "absolute",
+      top: "38%",
+      zIndex: 10,
+      display: "grid",
+      placeItems: "center",
+      width: "42px",
+      height: "54px",
+      border: "1px solid #484550",
+      borderRadius: "10px",
+      backgroundColor: "rgba(16, 16, 20, 0.9)",
+      color: "#f5f3ef",
+      cursor: "pointer"
+    },
+    carouselArrowLeft: {
+      left: "10px"
+    },
+    carouselArrowRight: {
+      right: "10px"
+    },
     // Centers the fallback message when a poster is missing.
     posterPlaceholder: {
       display: "grid",

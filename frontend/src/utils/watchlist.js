@@ -1,8 +1,8 @@
-function getWatchlistStorageKey() {
+function getUserStorageKey(namespace, resourceName) {
   const token = localStorage.getItem("pantheon_token");
   const payload = token?.split(".")[1];
   if (!payload) {
-    throw new Error("Sign in to access your watchlist.");
+    throw new Error(`Sign in to access your ${resourceName}.`);
   }
 
   let claims;
@@ -14,15 +14,23 @@ function getWatchlistStorageKey() {
     );
     claims = JSON.parse(new TextDecoder().decode(bytes));
   } catch {
-    throw new Error("Could not identify the signed-in user for this watchlist.");
+    throw new Error(`Could not identify the signed-in user for this ${resourceName}.`);
   }
 
   const userId = claims.user_id;
   if (typeof userId !== "string" && typeof userId !== "number") {
-    throw new Error("Could not identify the signed-in user for this watchlist.");
+    throw new Error(`Could not identify the signed-in user for this ${resourceName}.`);
   }
 
-  return `pantheon_watchlist_${userId}`;
+  return `pantheon_${namespace}_${userId}`;
+}
+
+function getWatchlistStorageKey() {
+  return getUserStorageKey("watchlist", "watchlist");
+}
+
+function getRatingsStorageKey() {
+  return getUserStorageKey("ratings", "ratings");
 }
 
 function createDefaultList(movies = []) {
@@ -192,4 +200,79 @@ export function saveUserWatchlist(movies) {
     )
   };
   writeUserWatchlists(updatedData);
+}
+
+function readUserRatings() {
+  const storedRatings = localStorage.getItem(getRatingsStorageKey());
+  if (!storedRatings) return {};
+
+  let ratings;
+  try {
+    ratings = JSON.parse(storedRatings);
+  } catch {
+    throw new Error("Your saved ratings are invalid. Clear them and try again.");
+  }
+
+  if (
+    !ratings ||
+    typeof ratings !== "object" ||
+    Array.isArray(ratings) ||
+    Object.values(ratings).some((rating) => {
+      const numericRating = Number(rating);
+      return !Number.isFinite(numericRating) || numericRating < 1 || numericRating > 10;
+    })
+  ) {
+    throw new Error("Your saved ratings are invalid. Clear them and try again.");
+  }
+
+  return ratings;
+}
+
+function writeUserRatings(ratings) {
+  localStorage.setItem(getRatingsStorageKey(), JSON.stringify(ratings));
+}
+
+export function loadUserRatings() {
+  return readUserRatings();
+}
+
+export function mergeUserRatings(legacyRatings) {
+  const ratings = readUserRatings();
+  let changed = false;
+
+  for (const [movieId, rating] of Object.entries(legacyRatings)) {
+    if (ratings[movieId] === undefined && rating != null) {
+      ratings[movieId] = rating;
+      changed = true;
+    }
+  }
+
+  if (changed) writeUserRatings(ratings);
+  return ratings;
+}
+
+export function saveUserRating(movieId, rating) {
+  if ((typeof movieId !== "string" && typeof movieId !== "number") || !movieId) {
+    throw new Error("A valid movie ID is required to save a rating.");
+  }
+  const numericRating = Number(rating);
+  if (!Number.isFinite(numericRating) || numericRating < 1 || numericRating > 10) {
+    throw new Error("Ratings must be between 1 and 10.");
+  }
+
+  const ratings = readUserRatings();
+  ratings[movieId] = rating;
+  writeUserRatings(ratings);
+  return ratings;
+}
+
+export function clearUserRating(movieId) {
+  if ((typeof movieId !== "string" && typeof movieId !== "number") || !movieId) {
+    throw new Error("A valid movie ID is required to clear a rating.");
+  }
+
+  const ratings = readUserRatings();
+  delete ratings[movieId];
+  writeUserRatings(ratings);
+  return ratings;
 }
