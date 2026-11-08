@@ -30,7 +30,9 @@ export default function useUserWatchlist() {
   }, []);
 
   const handleToggleWatchlist = useCallback(async (movie) => {
-    const watchlistMovie = watchlist.find((item) => item.id === movie.id);
+    const watchlistMovie = watchlist.find(
+      (item) => String(item.id) === String(movie.id)
+    );
     try {
       const updatedWatchlist = !watchlistMovie
         ? await addMovieToUserWatchlist(movie)

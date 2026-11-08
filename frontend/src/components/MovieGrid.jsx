@@ -16,20 +16,25 @@ export default function MovieGrid({
 }) {
   return (
     <div ref={gridRef} style={{ ...styles.shared.grid, ...gridStyle }}>
-      {movies.map((movie) => (
-        <MovieCard
-          key={movie.id}
-          movie={movie}
-          userRating={userRatings[movie.id]}
-          isInWatchlist={watchlist.some((item) => item.id === movie.id)}
-          isWatched={Boolean(watchlist.find((item) => item.id === movie.id)?.watched)}
-          onSelect={onSelect}
-          onToggleWatchlist={onToggleWatchlist}
-          onSaveRating={onSaveRating}
-          onClearRating={onClearRating}
-          onRemove={onRemove}
-        />
-      ))}
+      {movies.map((movie) => {
+        const watchlistMovie = watchlist.find(
+          (item) => String(item.id) === String(movie.id)
+        );
+        return (
+          <MovieCard
+            key={movie.id}
+            movie={movie}
+            userRating={userRatings[movie.id]}
+            isInWatchlist={Boolean(watchlistMovie)}
+            isWatched={Boolean(watchlistMovie?.watched)}
+            onSelect={onSelect}
+            onToggleWatchlist={onToggleWatchlist}
+            onSaveRating={onSaveRating}
+            onClearRating={onClearRating}
+            onRemove={onRemove}
+          />
+        );
+      })}
     </div>
   );
 }

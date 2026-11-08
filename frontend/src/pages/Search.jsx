@@ -214,6 +214,10 @@ export default function Search() {
     return list;
   }, [movies, selectedGenre, sortBy]);
 
+  const selectedWatchlistMovie = selectedMovie
+    ? watchlist.find((item) => String(item.id) === String(selectedMovie.id))
+    : null;
+
   return (
     <div>
       <Navbar
@@ -341,10 +345,8 @@ export default function Search() {
         <MovieDetailsDialog
           movie={selectedMovie}
           userRating={userRatings[selectedMovie.id]}
-          isInWatchlist={watchlist.some((item) => item.id === selectedMovie.id)}
-          isWatched={Boolean(
-            watchlist.find((item) => item.id === selectedMovie.id)?.watched
-          )}
+          isInWatchlist={Boolean(selectedWatchlistMovie)}
+          isWatched={Boolean(selectedWatchlistMovie?.watched)}
           onToggleWatchlist={handleToggleWatchlist}
           onSaveRating={handleSaveRating}
           onClearRating={handleClearRating}
