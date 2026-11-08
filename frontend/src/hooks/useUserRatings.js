@@ -1,49 +1,54 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   clearUserRating,
-  loadUserRatings,
-  mergeUserRatings,
+  ensureLegacyUserDataMigrated,
+  fetchUserRatings,
   saveUserRating
-} from "../utils/watchlist";
+} from "../api/userData";
 
 export default function useUserRatings() {
   const [userRatings, setUserRatings] = useState({});
   const [ratingsError, setRatingsError] = useState("");
 
   useEffect(() => {
+    const controller = new AbortController();
     try {
-      setUserRatings(loadUserRatings());
+      ensureLegacyUserDataMigrated()
+        .then(() => fetchUserRatings(controller.signal))
+        .then(setUserRatings)
+        .catch((error) => {
+          if (!controller.signal.aborted) {
+            setRatingsError(error.message || "Could not load your ratings.");
+          }
+        });
     } catch (error) {
       setRatingsError(error.message || "Could not load your ratings.");
     }
+    return () => controller.abort();
   }, []);
 
-  const handleSaveRating = useCallback((movie, rating) => {
+  const handleSaveRating = useCallback(async (movie, rating) => {
     try {
-      setUserRatings(saveUserRating(movie.id, rating));
+      await saveUserRating(movie.id, rating, movie);
+      setUserRatings((previous) => ({ ...previous, [movie.id]: rating }));
       setRatingsError("");
     } catch (error) {
       setRatingsError(error.message || "Could not save your rating.");
     }
   }, []);
 
-  const handleClearRating = useCallback((movie) => {
+  const handleClearRating = useCallback(async (movie) => {
     try {
-      setUserRatings(clearUserRating(movie.id));
+      await clearUserRating(movie.id);
+      setUserRatings((previous) => {
+        const updated = { ...previous };
+        delete updated[movie.id];
+        return updated;
+      });
       setRatingsError("");
     } catch (error) {
       setRatingsError(error.message || "Could not clear your rating.");
     }
   }, []);
-
-  const mergeRatings = useCallback((legacyRatings) => {
-    try {
-      setUserRatings(mergeUserRatings(legacyRatings));
-      setRatingsError("");
-    } catch (error) {
-      setRatingsError(error.message || "Could not load your ratings.");
-    }
-  }, []);
-
-  return { userRatings, ratingsError, handleSaveRating, handleClearRating, mergeRatings };
+  return { userRatings, ratingsError, handleSaveRating, handleClearRating };
 }

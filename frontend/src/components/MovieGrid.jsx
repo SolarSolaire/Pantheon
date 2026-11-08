@@ -22,6 +22,7 @@ export default function MovieGrid({
           movie={movie}
           userRating={userRatings[movie.id]}
           isInWatchlist={watchlist.some((item) => item.id === movie.id)}
+          isWatched={Boolean(watchlist.find((item) => item.id === movie.id)?.watched)}
           onSelect={onSelect}
           onToggleWatchlist={onToggleWatchlist}
           onSaveRating={onSaveRating}

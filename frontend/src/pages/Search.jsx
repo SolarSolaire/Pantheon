@@ -1,8 +1,10 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import styles from "../styles.jsx";
-import { loadUserWatchlist, saveUserWatchlist } from "../utils/watchlist";
+import { isAuthenticated } from "../utils/auth";
+import { logoutUser } from "../api/userData";
 import useUserRatings from "../hooks/useUserRatings";
+import useUserWatchlist from "../hooks/useUserWatchlist";
 import { MovieDetailsDialog } from "../components/MovieCard";
 import MovieGrid from "../components/MovieGrid";
 import SearchBar from "../components/SearchBar";
@@ -114,12 +116,11 @@ export default function Search() {
   const [searchQuery, setSearchQuery] = useState(() => searchParams.get("query") || "");
   const [selectedGenre, setSelectedGenre] = useState("All");
   const [sortBy, setSortBy] = useState("rating-desc");
-  const [watchlist, setWatchlist] = useState([]);
-  const [watchlistError, setWatchlistError] = useState("");
   const { userRatings, ratingsError, handleSaveRating, handleClearRating } =
     useUserRatings();
+  const { watchlist, watchlistError, handleToggleWatchlist } = useUserWatchlist();
   const [selectedMovie, setSelectedMovie] = useState(null);
-  const [isSignedIn, setIsSignedIn] = useState(() => detectSignedIn());
+  const [isSignedIn, setIsSignedIn] = useState(isAuthenticated);
   const [movies, setMovies] = useState([]);
   const [moviesLoading, setMoviesLoading] = useState(true);
   const [moviesError, setMoviesError] = useState("");
@@ -167,40 +168,8 @@ export default function Search() {
     };
   }, [searchQuery]);
 
-  function detectSignedIn() {
-    const authKeys = [
-      "token",
-      "authToken",
-      "accessToken",
-      "jwt",
-      "user",
-      "currentUser",
-      "authUser",
-      "isAuthenticated",
-    ];
-    return authKeys.some((key) => {
-      const value = localStorage.getItem(key) ?? sessionStorage.getItem(key);
-      if (
-        !value ||
-        value === "null" ||
-        value === "undefined" ||
-        value === "false"
-      )
-        return false;
-      try {
-        const parsed = JSON.parse(value);
-        if (typeof parsed === "boolean") return parsed;
-        if (parsed && typeof parsed === "object")
-          return Object.keys(parsed).length > 0;
-      } catch (_) {
-        // Non-empty token strings count as signed in.
-      }
-      return value.trim().length > 0;
-    });
-  }
-
   useEffect(() => {
-    const syncAuthState = () => setIsSignedIn(detectSignedIn());
+    const syncAuthState = () => setIsSignedIn(isAuthenticated());
     window.addEventListener("storage", syncAuthState);
     window.addEventListener("focus", syncAuthState);
     return () => {
@@ -209,51 +178,20 @@ export default function Search() {
     };
   }, []);
 
-  useEffect(() => {
-    try {
-      setWatchlist(loadUserWatchlist());
-    } catch (err) {
-      setWatchlistError(err.message || "Could not load your watchlist.");
-    }
-  }, []);
-
-  function handleAuthAction() {
+  async function handleAuthAction() {
     if (!isSignedIn) {
       navigate("/login");
       return;
     }
 
-    [
-      "token",
-      "authToken",
-      "accessToken",
-      "jwt",
-      "user",
-      "currentUser",
-      "authUser",
-      "isAuthenticated",
-    ].forEach((key) => {
-      localStorage.removeItem(key);
-      sessionStorage.removeItem(key);
-    });
+    try {
+      await logoutUser();
+    } catch (error) {
+      console.error("Could not revoke user session:", error);
+    }
     setIsSignedIn(false);
     navigate("/login");
   }
-
-  // Toggle watchlist state
-  const handleToggleWatchlist = (movie) => {
-    const isInWatchlist = watchlist.some((item) => item.id === movie.id);
-    const updatedWatchlist = isInWatchlist
-      ? watchlist.filter((item) => item.id !== movie.id)
-      : [...watchlist, movie];
-    try {
-      saveUserWatchlist(updatedWatchlist);
-      setWatchlist(updatedWatchlist);
-      setWatchlistError("");
-    } catch (err) {
-      setWatchlistError(err.message || "Could not save your watchlist.");
-    }
-  };
 
   const filteredMovies = useMemo(() => {
     let list = [...movies];
@@ -404,6 +342,9 @@ export default function Search() {
           movie={selectedMovie}
           userRating={userRatings[selectedMovie.id]}
           isInWatchlist={watchlist.some((item) => item.id === selectedMovie.id)}
+          isWatched={Boolean(
+            watchlist.find((item) => item.id === selectedMovie.id)?.watched
+          )}
           onToggleWatchlist={handleToggleWatchlist}
           onSaveRating={handleSaveRating}
           onClearRating={handleClearRating}

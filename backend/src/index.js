@@ -2,9 +2,11 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const db = require('./config/db');
+const initializeDatabase = require('./config/initDb');
 
 const authRoutes = require('./routes/authRoutes');
 const movieRoutes = require('./routes/movieRoutes');
+const userDataRoutes = require('./routes/userDataRoutes');
 
 const app = express();
 
@@ -37,16 +39,23 @@ app.get('/api/health', async (req, res) => {
 // mock routes
 app.use('/api/auth', authRoutes);
 app.use('/api/movies', movieRoutes);
+app.use('/api/user-data', userDataRoutes);
 
 const PORT = process.env.PORT || 5001;
-app.listen(PORT, async () => {
-  console.log(`Server running on http://localhost:${PORT}`);
 
-  // test connection on server boot
+async function startServer() {
   try {
-    const res = await db.query('SELECT NOW()');
-    console.log('Aiven DB Connection verified! Server time:', res.rows[0].now);
-  } catch (err) {
-    console.error('Failed to connect to Aiven DB on startup:', err.message);
+    await initializeDatabase();
+    const result = await db.query('SELECT NOW()');
+    console.log('PostgreSQL connection verified:', result.rows[0].now);
+    app.listen(PORT, () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  } catch (error) {
+    console.error('Backend startup failed:', error.message);
+    process.exitCode = 1;
+    await db.pool.end();
   }
-});
+}
+
+startServer();

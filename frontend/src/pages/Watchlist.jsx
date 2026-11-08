@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bookmark } from "lucide-react";
-import { clearAuthentication } from "../utils/auth";
-import { loadUserWatchlist, saveUserWatchlist } from "../utils/watchlist";
+import { logoutUser } from "../api/userData";
 import useUserRatings from "../hooks/useUserRatings";
+import useUserWatchlist from "../hooks/useUserWatchlist";
 import MovieGrid from "../components/MovieGrid";
 import Navbar from "../components/Navbar";
 
@@ -64,27 +64,16 @@ const watchlistStyles = {
 
 export default function Watchlist() {
   const navigate = useNavigate();
-  const [movies, setMovies] = useState([]);
   const [search, setSearch] = useState("");
-  const [error, setError] = useState("");
-  const { userRatings, ratingsError, handleSaveRating, handleClearRating, mergeRatings } =
+  const { userRatings, ratingsError, handleSaveRating, handleClearRating } =
     useUserRatings();
-
-  useEffect(() => {
-    try {
-      const loadedMovies = loadUserWatchlist();
-      setMovies(loadedMovies);
-      mergeRatings(
-        Object.fromEntries(
-          loadedMovies
-            .filter((movie) => movie.user_rating != null)
-            .map((movie) => [movie.id, movie.user_rating])
-        )
-      );
-    } catch (err) {
-      setError(err.message || "Could not load your watchlist.");
-    }
-  }, [mergeRatings]);
+  const {
+    watchlist: movies,
+    watchlistError: error,
+    watchlistLoading,
+    handleToggleWatchlist,
+    handleRemoveMovie
+  } = useUserWatchlist();
 
   function handleSearchSubmit(event) {
     event.preventDefault();
@@ -92,19 +81,12 @@ export default function Watchlist() {
     navigate(query ? `/search?query=${encodeURIComponent(query)}` : "/search");
   }
 
-  function handleRemoveMovie(movieId) {
-    const updatedMovies = movies.filter((movie) => movie.id !== movieId);
+  async function handleLogout() {
     try {
-      saveUserWatchlist(updatedMovies);
-      setMovies(updatedMovies);
-      setError("");
-    } catch (err) {
-      setError(err.message || "Could not update your watchlist.");
+      await logoutUser();
+    } catch (logoutError) {
+      console.error("Could not revoke user session:", logoutError);
     }
-  }
-
-  function handleLogout() {
-    clearAuthentication();
     navigate("/login", { replace: true });
   }
 
@@ -118,6 +100,8 @@ export default function Watchlist() {
         }}
         actions={[
           { label: "Home", onClick: () => navigate("/home") },
+          { label: "Reviews", onClick: () => navigate("/reviews") },
+          { label: "Account", onClick: () => navigate("/profile") },
           { label: "Logout", onClick: handleLogout }
         ]}
       />
@@ -145,7 +129,11 @@ export default function Watchlist() {
           </div>
         )}
 
-        {!error && movies.length === 0 && (
+        {!error && watchlistLoading && (
+          <div style={watchlistStyles.statusMessage}>Loading watchlist...</div>
+        )}
+
+        {!error && !watchlistLoading && movies.length === 0 && (
           <div style={watchlistStyles.emptyState}>
             <Bookmark size={44} color="#f4c96b" />
             <h2 style={watchlistStyles.emptyTitle}>Your watchlist is empty</h2>
@@ -162,10 +150,12 @@ export default function Watchlist() {
           </div>
         )}
 
-        {movies.length > 0 && (
+        {!watchlistLoading && movies.length > 0 && (
           <MovieGrid
             movies={movies}
             userRatings={userRatings}
+            watchlist={movies}
+            onToggleWatchlist={handleToggleWatchlist}
             onSaveRating={handleSaveRating}
             onClearRating={handleClearRating}
             onRemove={(movie) => handleRemoveMovie(movie.id)}

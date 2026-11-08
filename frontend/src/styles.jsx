@@ -246,7 +246,7 @@ const styles = {
   home: {
     // Styles the Home movie section heading.
     sectionTitle: {
-      margin: "8px 0 26px",
+      margin: "8px 0 26px 12px",
       fontSize: "clamp(1.7rem, 3vw, 2.35rem)",
       letterSpacing: "-0.04em"
     },
@@ -258,12 +258,12 @@ const styles = {
     },
     carousel: {
       gridAutoFlow: "column",
-      gridAutoColumns: "clamp(145px, 16vw, 185px)",
+      gridAutoColumns: "min(185px, calc(100vw - 64px))",
       gridTemplateColumns: "none",
       overflowX: "auto",
       scrollSnapType: "x mandatory",
       scrollBehavior: "smooth",
-      scrollPadding: "8px 12px",
+      scrollPadding: "8px 40px",
       scrollbarWidth: "none",
       padding: "12px"
     },

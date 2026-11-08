@@ -7,6 +7,7 @@ import NewAccount from "./pages/NewAccount";
 import Search from "./pages/Search";
 import Profile from "./pages/Profile";
 import Watchlist from "./pages/Watchlist";
+import Reviews from "./pages/Reviews";
 
 export default function App() {
   return (
@@ -15,12 +16,27 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/newaccount" element={<NewAccount />} />
         <Route path="/search" element={<Search />} />
-        <Route path="/profile" element={<Profile />} />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/watchlist"
           element={
             <ProtectedRoute>
               <Watchlist />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reviews"
+          element={
+            <ProtectedRoute>
+              <Reviews />
             </ProtectedRoute>
           }
         />

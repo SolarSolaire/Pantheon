@@ -1,14 +1,27 @@
 import api from "./axios";
 
-async function fetchMovies(endpoint, signal) {
+async function fetchMovies(endpoint, signal, params) {
   const { data } = await api.get(`/movies/${endpoint}`, {
+    params,
     signal
   });
   return data.results || [];
 }
 
+async function fetchMoviesWithFourMore(endpoint, signal) {
+  const [movies, nextPage] = await Promise.all([
+    fetchMovies(endpoint, signal, { page: 1 }),
+    fetchMovies(endpoint, signal, { page: 2 })
+  ]);
+  const movieIds = new Set(movies.map((movie) => movie.id));
+  const additionalMovies = nextPage
+    .filter((movie) => !movieIds.has(movie.id))
+    .slice(0, 4);
+  return [...movies, ...additionalMovies];
+}
+
 export async function fetchTrendingMovies(signal) {
-  return fetchMovies("trending", signal);
+  return fetchMoviesWithFourMore("trending", signal);
 }
 
 export async function fetchPopularMovies(signal) {
@@ -16,11 +29,11 @@ export async function fetchPopularMovies(signal) {
 }
 
 export async function fetchUpcomingMovies(signal) {
-  return fetchMovies("upcoming", signal);
+  return fetchMoviesWithFourMore("upcoming", signal);
 }
 
 export async function fetchNowPlayingMovies(signal) {
-  return fetchMovies("now-playing", signal);
+  return fetchMoviesWithFourMore("now-playing", signal);
 }
 
 export async function fetchMovieProductionCompany(movieId, signal) {
@@ -32,9 +45,5 @@ export async function fetchMovieProductionCompany(movieId, signal) {
 }
 
 export async function searchMovies(query, signal) {
-  const { data } = await api.get("/movies/search", {
-    params: { query },
-    signal
-  });
-  return data.results || [];
+  return fetchMovies("search", signal, { query });
 }

@@ -2,6 +2,9 @@ import React, { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Bookmark, Check, MessageSquareText, RotateCcw, Star, X } from "lucide-react";
 import { fetchMovieProductionCompany } from "../api/tmdb";
+import { saveUserReview } from "../api/userData";
+import { isAuthenticated } from "../utils/auth";
+import ReviewComposerDialog from "./ReviewComposerDialog";
 
 const IMAGE_URL = "https://image.tmdb.org/t/p/w500";
 const FALLBACK_IMAGE =
@@ -145,7 +148,7 @@ const movieStyles = {
   },
   reviewButton: {
     color: "#aaa7b2",
-    cursor: "not-allowed"
+    cursor: "pointer"
   },
   removeButton: {
     position: "absolute",
@@ -760,7 +763,7 @@ function MovieRatingDialog({
   );
 }
 
-function MovieRatingDropdown({
+export function MovieRatingDropdown({
   movie,
   userRating,
   onSave,
@@ -1034,6 +1037,7 @@ export function MovieDetailsDialog({
   movie,
   userRating,
   isInWatchlist,
+  isWatched = false,
   onToggleWatchlist,
   onSaveRating,
   onClearRating,
@@ -1104,17 +1108,20 @@ export function MovieDetailsDialog({
                     onClick={() => onToggleWatchlist(movie)}
                     style={{
                       ...movieStyles.modalActionButton,
-                      ...(isInWatchlist
+                      ...(isWatched
                         ? movieStyles.actionButtonActive
                         : movieStyles.actionButtonSecondary)
                     }}
                   >
-                    {isInWatchlist ? (
+                    {isWatched ? (
                       <>
                         <Check size={16} color="#10b981" />
-                        <span style={{ color: "#10b981" }}>
-                          Saved in Watchlist
-                        </span>
+                        <span style={{ color: "#10b981" }}>Watched · Remove</span>
+                      </>
+                    ) : isInWatchlist ? (
+                      <>
+                        <Bookmark size={16} fill="currentColor" />
+                        <span>Mark as Watched</span>
                       </>
                     ) : (
                       <>
@@ -1167,6 +1174,7 @@ export default function MovieCard({
   movie,
   userRating,
   isInWatchlist = false,
+  isWatched = false,
   onSelect,
   onToggleWatchlist,
   onSaveRating,
@@ -1174,14 +1182,18 @@ export default function MovieCard({
   onRemove
 }) {
   const [cardHovered, setCardHovered] = useState(false);
+  const [watchlistButtonHovered, setWatchlistButtonHovered] = useState(false);
   const [ratingPopoverOpen, setRatingPopoverOpen] = useState(false);
+  const [reviewComposerOpen, setReviewComposerOpen] = useState(false);
   const [productionCompany, setProductionCompany] = useState({
     status: "idle",
     name: null
   });
   const isMountedRef = useRef(true);
-  const cardActive = cardHovered || ratingPopoverOpen;
+  const cardActive =
+    (cardHovered && !watchlistButtonHovered) || ratingPopoverOpen;
   const posterUrl = getPosterUrl(movie.poster_path);
+  const canReview = isAuthenticated();
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -1308,11 +1320,23 @@ export default function MovieCard({
           {onToggleWatchlist && (
             <button
               type="button"
+              onMouseEnter={() => setWatchlistButtonHovered(true)}
+              onMouseLeave={() => setWatchlistButtonHovered(false)}
               aria-label={
-                isInWatchlist ? "Remove from watchlist" : "Add to watchlist"
+                isWatched
+                  ? "Watched; click to remove from watchlist"
+                  : isInWatchlist
+                    ? "In watchlist; click to mark watched"
+                    : "Add to watchlist"
               }
               aria-pressed={isInWatchlist}
-              title={isInWatchlist ? "Remove from watchlist" : "Add to watchlist"}
+              title={
+                isWatched
+                  ? "Watched · click to remove"
+                  : isInWatchlist
+                    ? "In watchlist · click to mark watched"
+                    : "Add to watchlist"
+              }
               onClick={(event) => {
                 event.stopPropagation();
                 onToggleWatchlist(movie);
@@ -1320,12 +1344,31 @@ export default function MovieCard({
               style={{
                 ...movieStyles.posterIconButton,
                 ...movieStyles.watchlistButton,
-                backgroundColor: isInWatchlist ? "#f4c96b" : "rgba(25, 24, 30, 0.88)",
-                borderColor: isInWatchlist ? "#f4c96b" : "#393740",
-                color: isInWatchlist ? "#19181e" : "#f4c96b"
+                backgroundColor: isWatched
+                  ? "rgba(16, 185, 129, 0.18)"
+                  : isInWatchlist
+                    ? "rgba(244, 201, 107, 0.42)"
+                    : "rgba(25, 24, 30, 0.55)",
+                borderColor: isWatched
+                  ? "#10b981"
+                  : isInWatchlist
+                    ? "#f4c96b"
+                    : "#393740",
+                color: isWatched
+                  ? "#10b981"
+                  : isInWatchlist
+                    ? "#19181e"
+                    : "#f4c96b"
               }}
             >
-              <Bookmark size={22} fill={isInWatchlist ? "currentColor" : "none"} />
+              {isWatched ? (
+                <Check size={22} strokeWidth={3} />
+              ) : (
+                <Bookmark
+                  size={22}
+                  fill={isInWatchlist ? "currentColor" : "none"}
+                />
+              )}
             </button>
           )}
           {movie.genre && (
@@ -1370,17 +1413,34 @@ export default function MovieCard({
         )}
         <button
           type="button"
-          disabled
-          aria-label="Write a review (coming soon)"
-          title="Writing reviews is coming soon"
+          disabled={!canReview}
+          aria-label={
+            canReview ? `Write a review for ${movie.title}` : "Sign in to write a review"
+          }
+          title={canReview ? "Write a review" : "Sign in to write a review"}
+          onClick={() => setReviewComposerOpen(true)}
           style={{
             ...movieStyles.posterControl,
-            ...movieStyles.reviewButton
+            ...movieStyles.reviewButton,
+            cursor: canReview ? "pointer" : "not-allowed",
+            opacity: canReview ? 1 : 0.55
           }}
         >
           <MessageSquareText size={15} />
         </button>
       </div>
+      {reviewComposerOpen && (
+        <ReviewComposerDialog
+          movie={movie}
+          productionCompany={productionCompany.name}
+          userRating={userRating}
+          RatingControl={MovieRatingDropdown}
+          onSaveRating={onSaveRating}
+          onClearRating={onClearRating}
+          onSave={saveUserReview}
+          onClose={() => setReviewComposerOpen(false)}
+        />
+      )}
     </article>
   );
 }

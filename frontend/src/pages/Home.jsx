@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { clearAuthentication, isAuthenticated } from "../utils/auth";
-import { loadUserWatchlist, saveUserWatchlist } from "../utils/watchlist";
+import { isAuthenticated } from "../utils/auth";
+import { logoutUser } from "../api/userData";
 import useUserRatings from "../hooks/useUserRatings";
+import useUserWatchlist from "../hooks/useUserWatchlist";
 import { MovieDetailsDialog } from "../components/MovieCard";
 import MovieCarousel from "../components/MovieCarousel";
 import Navbar from "../components/Navbar";
@@ -36,10 +37,9 @@ export default function Home() {
       ])
     )
   );
-  const [watchlist, setWatchlist] = useState([]);
-  const [watchlistError, setWatchlistError] = useState("");
   const { userRatings, ratingsError, handleSaveRating, handleClearRating } =
     useUserRatings();
+  const { watchlist, watchlistError, handleToggleWatchlist } = useUserWatchlist();
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [search, setSearch] = useState("");
   const [suggestions, setSuggestions] = useState([]);
@@ -61,16 +61,12 @@ export default function Home() {
     };
   }, [navigate]);
 
-  useEffect(() => {
+  async function handleAuthAction() {
     try {
-      setWatchlist(loadUserWatchlist());
-    } catch (err) {
-      setWatchlistError(err.message || "Could not load your watchlist.");
+      await logoutUser();
+    } catch (error) {
+      console.error("Could not revoke user session:", error);
     }
-  }, []);
-
-  function handleAuthAction() {
-    clearAuthentication();
     navigate("/login", { replace: true });
   }
 
@@ -151,20 +147,6 @@ export default function Home() {
     navigateToSearch(movie.title);
   }
 
-  function handleToggleWatchlist(movie) {
-    const isInWatchlist = watchlist.some((item) => item.id === movie.id);
-    const updatedWatchlist = isInWatchlist
-      ? watchlist.filter((item) => item.id !== movie.id)
-      : [...watchlist, movie];
-    try {
-      saveUserWatchlist(updatedWatchlist);
-      setWatchlist(updatedWatchlist);
-      setWatchlistError("");
-    } catch (err) {
-      setWatchlistError(err.message || "Could not save your watchlist.");
-    }
-  }
-
   return (
     <div>
       <Navbar
@@ -188,6 +170,8 @@ export default function Home() {
         }}
         actions={[
           { label: "Watchlist", onClick: () => navigate("/watchlist") },
+          { label: "Reviews", onClick: () => navigate("/reviews") },
+          { label: "Account", onClick: () => navigate("/profile") },
           { label: "Logout", onClick: handleAuthAction }
         ]}
       />
@@ -244,6 +228,9 @@ export default function Home() {
           movie={selectedMovie}
           userRating={userRatings[selectedMovie.id]}
           isInWatchlist={watchlist.some((item) => item.id === selectedMovie.id)}
+          isWatched={Boolean(
+            watchlist.find((item) => item.id === selectedMovie.id)?.watched
+          )}
           onToggleWatchlist={handleToggleWatchlist}
           onSaveRating={handleSaveRating}
           onClearRating={handleClearRating}
