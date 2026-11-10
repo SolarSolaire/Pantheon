@@ -55,22 +55,20 @@ async function upsertTitle(movieData) {
   return result.rows[0].title_id;
 }
 
-async function getWatchlistMovies(userId) {
+async function getUserTitles(userId) {
   const result = await db.query(
     `SELECT titles.tmdb_id AS id, titles.name AS title,
             titles.media_type, titles.overview,
             titles.release_date::text AS release_date, titles.poster_path,
-            user_titles.status, user_titles.watched_at, user_titles.added_at
+            user_titles.in_watchlist, user_titles.watched,
+            user_titles.watched_at, user_titles.added_at
      FROM user_titles
      JOIN titles USING (title_id)
      WHERE user_titles.user_id = $1
      ORDER BY user_titles.added_at, titles.tmdb_id`,
     [userId]
   );
-  return result.rows.map(({ status, ...movie }) => ({
-    ...movie,
-    watched: status === 'watched'
-  }));
+  return result.rows;
 }
 
 async function handleDatabaseError(res, message, operation) {
@@ -177,8 +175,14 @@ exports.clearRating = (req, res) => {
 
 exports.getWatchlist = (req, res) =>
   handleDatabaseError(res, 'Could not load watchlist.', async () => {
-    const movies = await getWatchlistMovies(req.user.user_id);
+    const movies = (await getUserTitles(req.user.user_id))
+      .filter((movie) => movie.in_watchlist);
     res.json({ movies });
+  });
+
+exports.getUserTitles = (req, res) =>
+  handleDatabaseError(res, 'Could not load tracked titles.', async () => {
+    res.json({ titles: await getUserTitles(req.user.user_id) });
   });
 
 exports.addWatchlistMovie = (req, res) => {
@@ -189,32 +193,68 @@ exports.addWatchlistMovie = (req, res) => {
   return handleDatabaseError(res, 'Could not add movie to watchlist.', async () => {
     const titleId = await upsertTitle(movieData);
     await db.query(
-      `INSERT INTO user_titles (user_id, title_id, status)
-       VALUES ($1, $2, 'watchlist')
+      `INSERT INTO user_titles (user_id, title_id, in_watchlist)
+       VALUES ($1, $2, TRUE)
        ON CONFLICT (user_id, title_id)
-       DO UPDATE SET status = 'watchlist', watched_at = NULL`,
+       DO UPDATE SET in_watchlist = TRUE,
+                     added_at = CASE
+                       WHEN NOT user_titles.in_watchlist THEN CURRENT_TIMESTAMP
+                       ELSE user_titles.added_at
+                     END`,
       [req.user.user_id, titleId]
     );
-    res.json({ movies: await getWatchlistMovies(req.user.user_id) });
+    res.json({ titles: await getUserTitles(req.user.user_id) });
   });
 };
 
-exports.markWatchlistMovieWatched = (req, res) => {
+exports.setUserTitleWatched = (req, res) => {
   const movieId = getMovieId(req.params.movieId);
   if (!movieId) return res.status(400).json({ message: 'A valid movie ID is required.' });
+  if (typeof req.body?.watched !== 'boolean') {
+    return res.status(400).json({ message: 'Watched status must be true or false.' });
+  }
+  const movieData = getMovieData(req.body.movie, movieId);
+  if (!movieData) {
+    return res.status(400).json({ message: 'Valid movie details are required.' });
+  }
 
   return handleDatabaseError(res, 'Could not mark movie as watched.', async () => {
-    await db.query(
-      `UPDATE user_titles
-       SET status = 'watched',
-           watched_at = COALESCE(watched_at, CURRENT_TIMESTAMP)
-       FROM titles
-       WHERE user_titles.title_id = titles.title_id
-         AND user_titles.user_id = $1
-         AND titles.tmdb_id = $2`,
-      [req.user.user_id, movieId]
-    );
-    res.json({ movies: await getWatchlistMovies(req.user.user_id) });
+    if (req.body.watched) {
+      const titleId = await upsertTitle(movieData);
+      await db.query(
+        `INSERT INTO user_titles (
+           user_id, title_id, in_watchlist, watched, watched_at
+         )
+         VALUES ($1, $2, FALSE, TRUE, CURRENT_TIMESTAMP)
+         ON CONFLICT (user_id, title_id)
+         DO UPDATE SET watched = TRUE,
+                       watched_at = COALESCE(
+                         user_titles.watched_at,
+                         CURRENT_TIMESTAMP
+                       )`,
+        [req.user.user_id, titleId]
+      );
+    } else {
+      const title = await db.query(
+        'SELECT title_id FROM titles WHERE tmdb_id = $1',
+        [movieId]
+      );
+      if (title.rows[0]) {
+        await db.query(
+          `DELETE FROM user_titles
+           WHERE user_id = $1 AND title_id = $2
+             AND NOT in_watchlist AND watched`,
+          [req.user.user_id, title.rows[0].title_id]
+        );
+        await db.query(
+          `UPDATE user_titles
+           SET watched = FALSE, watched_at = NULL
+           WHERE user_id = $1 AND title_id = $2 AND in_watchlist`,
+          [req.user.user_id, title.rows[0].title_id]
+        );
+      }
+    }
+    res.json({ titles: await getUserTitles(req.user.user_id) });
   });
 };
 
@@ -228,10 +268,23 @@ exports.removeWatchlistMovie = (req, res) => {
        USING titles
        WHERE user_titles.title_id = titles.title_id
          AND user_titles.user_id = $1
-         AND titles.tmdb_id = $2`,
+         AND titles.tmdb_id = $2
+         AND user_titles.in_watchlist
+         AND NOT user_titles.watched`,
       [req.user.user_id, movieId]
     );
-    res.json({ movies: await getWatchlistMovies(req.user.user_id) });
+    await db.query(
+      `UPDATE user_titles
+       SET in_watchlist = FALSE
+       FROM titles
+       WHERE user_titles.title_id = titles.title_id
+         AND user_titles.user_id = $1
+         AND titles.tmdb_id = $2
+         AND user_titles.in_watchlist
+         AND user_titles.watched`,
+      [req.user.user_id, movieId]
+    );
+    res.json({ titles: await getUserTitles(req.user.user_id) });
   });
 };
 

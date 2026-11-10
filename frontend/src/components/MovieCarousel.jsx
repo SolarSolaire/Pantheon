@@ -7,9 +7,10 @@ export default function MovieCarousel({
   label,
   movies,
   userRatings,
-  watchlist,
+  userTitles,
   onSelect,
   onToggleWatchlist,
+  onToggleWatched,
   onSaveRating,
   onClearRating
 }) {
@@ -191,9 +192,10 @@ export default function MovieCarousel({
         gridRef={carouselRef}
         movies={movies}
         userRatings={userRatings}
-        watchlist={watchlist}
+        userTitles={userTitles}
         onSelect={onSelect}
         onToggleWatchlist={onToggleWatchlist}
+        onToggleWatched={onToggleWatched}
         onSaveRating={onSaveRating}
         onClearRating={onClearRating}
         gridStyle={{

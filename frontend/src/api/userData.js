@@ -116,28 +116,29 @@ export async function clearUserRating(movieId) {
   await api.delete(`/user-data/ratings/${encodeURIComponent(movieId)}`);
 }
 
-export async function fetchUserWatchlist(signal) {
-  const { data } = await api.get("/user-data/watchlist", { signal });
-  return data.movies;
+export async function fetchUserTitles(signal) {
+  const { data } = await api.get("/user-data/titles", { signal });
+  return data.titles;
 }
 
 export async function addMovieToUserWatchlist(movie) {
   const { data } = await api.post("/user-data/watchlist", movie);
-  return data.movies;
+  return data.titles;
 }
 
-export async function markUserWatchlistMovieWatched(movieId) {
+export async function setUserTitleWatched(movie, watched) {
   const { data } = await api.put(
-    `/user-data/watchlist/${encodeURIComponent(movieId)}/watched`
+    `/user-data/titles/${encodeURIComponent(movie.id)}/watched`,
+    { movie, watched }
   );
-  return data.movies;
+  return data.titles;
 }
 
 export async function removeMovieFromUserWatchlist(movieId) {
   const { data } = await api.delete(
     `/user-data/watchlist/${encodeURIComponent(movieId)}`
   );
-  return data.movies;
+  return data.titles;
 }
 
 export async function fetchUserReviews(signal) {

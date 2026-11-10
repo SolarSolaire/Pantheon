@@ -1,6 +1,14 @@
 import React, { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Bookmark, Check, MessageSquareText, RotateCcw, Star, X } from "lucide-react";
+import {
+  Bookmark,
+  Eye,
+  EyeOff,
+  MessageSquareText,
+  RotateCcw,
+  Star,
+  X
+} from "lucide-react";
 import { fetchMovieProductionCompany } from "../api/tmdb";
 import { saveUserReview } from "../api/userData";
 import { isAuthenticated } from "../utils/auth";
@@ -158,7 +166,7 @@ const movieStyles = {
   },
   genreBadge: {
     position: "absolute",
-    top: "52px",
+    top: "94px",
     right: "10px",
     backgroundColor: "rgba(16, 16, 20, 0.85)",
     color: "#aaa7b2",
@@ -223,6 +231,47 @@ const movieStyles = {
     borderRadius: "0 0 0 10px",
     backgroundColor: "rgba(25, 24, 30, 0.88)",
     boxShadow: "0 2px 8px rgba(0, 0, 0, 0.7)"
+  },
+  watchedButton: {
+    position: "absolute",
+    top: "42px",
+    right: 0,
+    zIndex: 2,
+    width: "42px",
+    height: "42px",
+    borderLeft: "1px solid #2b2931",
+    borderBottom: "1px solid #2b2931",
+    borderRadius: "0 0 0 10px",
+    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.7)"
+  },
+  removedOverlay: {
+    position: "absolute",
+    inset: 0,
+    zIndex: 5,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "12px",
+    padding: "16px",
+    boxSizing: "border-box",
+    backgroundColor: "rgba(12, 11, 15, 0.88)",
+    color: "#f5f3ef",
+    textAlign: "center"
+  },
+  removedMessage: {
+    fontSize: "1.1rem",
+    fontWeight: 800
+  },
+  undoButton: {
+    padding: "8px 14px",
+    border: "1px solid #f4c96b",
+    borderRadius: "8px",
+    backgroundColor: "rgba(244, 201, 107, 0.14)",
+    color: "#f4c96b",
+    font: "inherit",
+    fontWeight: 700,
+    cursor: "pointer"
   },
   modalOverlay: {
     position: "fixed",
@@ -350,6 +399,12 @@ const movieStyles = {
     gap: "12px",
     marginTop: "auto"
   },
+  modalWatchlistActions: {
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
+    gap: "8px"
+  },
   modalActionButton: {
     flex: 1,
     display: "flex",
@@ -362,6 +417,11 @@ const movieStyles = {
     fontWeight: "700",
     cursor: "pointer",
     border: "1px solid transparent"
+  },
+  modalTrackingButton: {
+    flex: "none",
+    width: "100%",
+    boxSizing: "border-box"
   },
   ratingModalContent: {
     backgroundColor: "#19181e",
@@ -1039,6 +1099,7 @@ export function MovieDetailsDialog({
   isInWatchlist,
   isWatched = false,
   onToggleWatchlist,
+  onToggleWatched,
   onSaveRating,
   onClearRating,
   onClose
@@ -1103,33 +1164,48 @@ export function MovieDetailsDialog({
                 </p>
 
                 <div style={movieStyles.modalActions}>
-                  <button
-                    type="button"
-                    onClick={() => onToggleWatchlist(movie)}
-                    style={{
-                      ...movieStyles.modalActionButton,
-                      ...(isWatched
-                        ? movieStyles.actionButtonActive
-                        : movieStyles.actionButtonSecondary)
-                    }}
-                  >
-                    {isWatched ? (
-                      <>
-                        <Check size={16} color="#10b981" />
-                        <span style={{ color: "#10b981" }}>Watched · Remove</span>
-                      </>
-                    ) : isInWatchlist ? (
-                      <>
-                        <Bookmark size={16} fill="currentColor" />
-                        <span>Mark as Watched</span>
-                      </>
-                    ) : (
-                      <>
-                        <Bookmark size={16} />
-                        <span>Add to Watchlist</span>
-                      </>
-                    )}
-                  </button>
+                  <div style={movieStyles.modalWatchlistActions}>
+                    <button
+                      type="button"
+                      onClick={() => onToggleWatchlist(movie)}
+                      aria-pressed={isInWatchlist}
+                      style={{
+                        ...movieStyles.modalActionButton,
+                        ...movieStyles.modalTrackingButton,
+                        ...movieStyles.actionButtonSecondary,
+                        ...(isInWatchlist
+                          ? {
+                              backgroundColor: "rgba(244, 201, 107, 0.16)",
+                              borderColor: "#f4c96b",
+                              color: "#f4c96b"
+                            }
+                          : {})
+                      }}
+                    >
+                      <Bookmark
+                        size={16}
+                        fill={isInWatchlist ? "currentColor" : "none"}
+                      />
+                      <span>
+                        {isInWatchlist ? "Remove from Watchlist" : "Add to Watchlist"}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onToggleWatched(movie)}
+                      aria-pressed={isWatched}
+                      style={{
+                        ...movieStyles.modalActionButton,
+                        ...movieStyles.modalTrackingButton,
+                        ...(isWatched
+                          ? movieStyles.actionButtonActive
+                          : movieStyles.actionButtonSecondary)
+                      }}
+                    >
+                      {isWatched ? <Eye size={16} /> : <EyeOff size={16} />}
+                      <span>{isWatched ? "Mark as Unwatched" : "Mark as Watched"}</span>
+                    </button>
+                  </div>
 
                   <button
                     type="button"
@@ -1177,12 +1253,15 @@ export default function MovieCard({
   isWatched = false,
   onSelect,
   onToggleWatchlist,
+  onToggleWatched,
   onSaveRating,
   onClearRating,
-  onRemove
+  onRemove,
+  isRemoved = false,
+  onUndoRemoval
 }) {
   const [cardHovered, setCardHovered] = useState(false);
-  const [watchlistButtonHovered, setWatchlistButtonHovered] = useState(false);
+  const [trackingButtonHovered, setTrackingButtonHovered] = useState(false);
   const [ratingPopoverOpen, setRatingPopoverOpen] = useState(false);
   const [reviewComposerOpen, setReviewComposerOpen] = useState(false);
   const [productionCompany, setProductionCompany] = useState({
@@ -1191,7 +1270,7 @@ export default function MovieCard({
   });
   const isMountedRef = useRef(true);
   const cardActive =
-    (cardHovered && !watchlistButtonHovered) || ratingPopoverOpen;
+    (cardHovered && !trackingButtonHovered) || ratingPopoverOpen;
   const posterUrl = getPosterUrl(movie.poster_path);
   const canReview = isAuthenticated();
 
@@ -1320,22 +1399,14 @@ export default function MovieCard({
           {onToggleWatchlist && (
             <button
               type="button"
-              onMouseEnter={() => setWatchlistButtonHovered(true)}
-              onMouseLeave={() => setWatchlistButtonHovered(false)}
+              onMouseEnter={() => setTrackingButtonHovered(true)}
+              onMouseLeave={() => setTrackingButtonHovered(false)}
               aria-label={
-                isWatched
-                  ? "Watched; click to remove from watchlist"
-                  : isInWatchlist
-                    ? "In watchlist; click to mark watched"
-                    : "Add to watchlist"
+                isInWatchlist ? "Remove from watchlist" : "Add to watchlist"
               }
               aria-pressed={isInWatchlist}
               title={
-                isWatched
-                  ? "Watched · click to remove"
-                  : isInWatchlist
-                    ? "In watchlist · click to mark watched"
-                    : "Add to watchlist"
+                isInWatchlist ? "Remove from watchlist" : "Add to watchlist"
               }
               onClick={(event) => {
                 event.stopPropagation();
@@ -1344,35 +1415,58 @@ export default function MovieCard({
               style={{
                 ...movieStyles.posterIconButton,
                 ...movieStyles.watchlistButton,
-                backgroundColor: isWatched
-                  ? "rgba(16, 185, 129, 0.18)"
-                  : isInWatchlist
-                    ? "rgba(244, 201, 107, 0.42)"
-                    : "rgba(25, 24, 30, 0.55)",
-                borderColor: isWatched
-                  ? "#10b981"
-                  : isInWatchlist
-                    ? "#f4c96b"
-                    : "#393740",
-                color: isWatched
-                  ? "#10b981"
-                  : isInWatchlist
-                    ? "#19181e"
-                    : "#f4c96b"
+                backgroundColor: isInWatchlist
+                  ? "rgba(244, 201, 107, 0.42)"
+                  : "rgba(25, 24, 30, 0.55)",
+                borderColor: isInWatchlist ? "#f4c96b" : "#393740",
+                color: "#f4c96b"
               }}
             >
-              {isWatched ? (
-                <Check size={22} strokeWidth={3} />
-              ) : (
-                <Bookmark
-                  size={22}
-                  fill={isInWatchlist ? "currentColor" : "none"}
-                />
-              )}
+              <Bookmark size={22} fill={isInWatchlist ? "currentColor" : "none"} />
+            </button>
+          )}
+          {onToggleWatched && (
+            <button
+              type="button"
+              onMouseEnter={() => setTrackingButtonHovered(true)}
+              onMouseLeave={() => setTrackingButtonHovered(false)}
+              aria-label={isWatched ? "Mark as unwatched" : "Mark as watched"}
+              aria-pressed={isWatched}
+              title={isWatched ? "Mark as unwatched" : "Mark as watched"}
+              onClick={(event) => {
+                event.stopPropagation();
+                onToggleWatched(movie);
+              }}
+              style={{
+                ...movieStyles.posterIconButton,
+                ...movieStyles.watchedButton,
+                backgroundColor: isWatched
+                  ? "rgba(16, 185, 129, 0.24)"
+                  : "rgba(25, 24, 30, 0.55)",
+                borderColor: isWatched ? "#10b981" : "#393740",
+                color: isWatched ? "#10b981" : "#d0cdd5"
+              }}
+            >
+              {isWatched ? <Eye size={22} /> : <EyeOff size={22} />}
             </button>
           )}
           {movie.genre && (
             <div style={movieStyles.genreBadge}>{movie.genre}</div>
+          )}
+          {isRemoved && (
+            <div style={movieStyles.removedOverlay}>
+              <span style={movieStyles.removedMessage}>Removed</span>
+              <button
+                type="button"
+                style={movieStyles.undoButton}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onUndoRemoval?.(movie);
+                }}
+              >
+                Undo
+              </button>
+            </div>
           )}
         </div>
       </div>

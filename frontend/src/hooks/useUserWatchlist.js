@@ -2,21 +2,21 @@ import { useCallback, useEffect, useState } from "react";
 import {
   addMovieToUserWatchlist,
   ensureLegacyUserDataMigrated,
-  fetchUserWatchlist,
-  markUserWatchlistMovieWatched,
-  removeMovieFromUserWatchlist
+  fetchUserTitles,
+  removeMovieFromUserWatchlist,
+  setUserTitleWatched
 } from "../api/userData";
 
 export default function useUserWatchlist() {
-  const [watchlist, setWatchlist] = useState([]);
+  const [userTitles, setUserTitles] = useState([]);
   const [watchlistError, setWatchlistError] = useState("");
   const [watchlistLoading, setWatchlistLoading] = useState(true);
 
   useEffect(() => {
     const controller = new AbortController();
     ensureLegacyUserDataMigrated()
-      .then(() => fetchUserWatchlist(controller.signal))
-      .then(setWatchlist)
+      .then(() => fetchUserTitles(controller.signal))
+      .then(setUserTitles)
       .catch((error) => {
         if (!controller.signal.aborted) {
           setWatchlistError(error.message || "Could not load your watchlist.");
@@ -30,36 +30,41 @@ export default function useUserWatchlist() {
   }, []);
 
   const handleToggleWatchlist = useCallback(async (movie) => {
-    const watchlistMovie = watchlist.find(
+    const userTitle = userTitles.find(
       (item) => String(item.id) === String(movie.id)
     );
     try {
-      const updatedWatchlist = !watchlistMovie
-        ? await addMovieToUserWatchlist(movie)
-        : watchlistMovie.watched
-          ? await removeMovieFromUserWatchlist(movie.id)
-          : await markUserWatchlistMovieWatched(movie.id);
-      setWatchlist(updatedWatchlist);
+      const updatedUserTitles = userTitle?.in_watchlist
+        ? await removeMovieFromUserWatchlist(movie.id)
+        : await addMovieToUserWatchlist(movie);
+      setUserTitles(updatedUserTitles);
       setWatchlistError("");
+      return true;
     } catch (error) {
       setWatchlistError(error.message || "Could not update your watchlist.");
+      return false;
     }
-  }, [watchlist]);
+  }, [userTitles]);
 
-  const handleRemoveMovie = useCallback(async (movieId) => {
+  const handleToggleWatched = useCallback(async (movie) => {
+    const userTitle = userTitles.find(
+      (item) => String(item.id) === String(movie.id)
+    );
     try {
-      setWatchlist(await removeMovieFromUserWatchlist(movieId));
+      setUserTitles(await setUserTitleWatched(movie, !userTitle?.watched));
       setWatchlistError("");
+      return true;
     } catch (error) {
-      setWatchlistError(error.message || "Could not update your watchlist.");
+      setWatchlistError(error.message || "Could not update watched status.");
+      return false;
     }
-  }, []);
+  }, [userTitles]);
 
   return {
-    watchlist,
+    userTitles,
     watchlistError,
     watchlistLoading,
     handleToggleWatchlist,
-    handleRemoveMovie
+    handleToggleWatched
   };
 }

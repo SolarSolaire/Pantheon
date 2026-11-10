@@ -90,6 +90,19 @@ const styles = {
     fontSize: "1.45rem",
     fontWeight: 800
   },
+  watchedStatButton: {
+    display: "grid",
+    justifyItems: "start",
+    gap: "8px",
+    width: "100%",
+    padding: 0,
+    border: 0,
+    background: "transparent",
+    color: "inherit",
+    font: "inherit",
+    textAlign: "left",
+    cursor: "pointer"
+  },
   message: {
     marginTop: "14px",
     color: "#aaa7b2",
@@ -200,10 +213,17 @@ export default function Profile() {
             {statistics && (
               <section style={styles.stats} aria-label="Your statistics">
                 <div style={styles.stat}>
-                  <span style={styles.statLabel}>
-                    <Eye size={16} /> Movies watched
-                  </span>
-                  <strong style={styles.statValue}>{statistics.moviesWatched}</strong>
+                  <button
+                    type="button"
+                    style={styles.watchedStatButton}
+                    onClick={() => navigate("/watched")}
+                    aria-label={`View ${statistics.moviesWatched} watched movies`}
+                  >
+                    <span style={styles.statLabel}>
+                      <Eye size={16} /> Movies watched
+                    </span>
+                    <strong style={styles.statValue}>{statistics.moviesWatched}</strong>
+                  </button>
                 </div>
                 <div style={styles.stat}>
                   <span style={styles.statLabel}>

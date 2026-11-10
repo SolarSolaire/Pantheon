@@ -39,7 +39,12 @@ export default function Home() {
   );
   const { userRatings, ratingsError, handleSaveRating, handleClearRating } =
     useUserRatings();
-  const { watchlist, watchlistError, handleToggleWatchlist } = useUserWatchlist();
+  const {
+    userTitles,
+    watchlistError,
+    handleToggleWatchlist,
+    handleToggleWatched
+  } = useUserWatchlist();
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [search, setSearch] = useState("");
   const [suggestions, setSuggestions] = useState([]);
@@ -147,8 +152,8 @@ export default function Home() {
     navigateToSearch(movie.title);
   }
 
-  const selectedWatchlistMovie = selectedMovie
-    ? watchlist.find((item) => String(item.id) === String(selectedMovie.id))
+  const selectedUserTitle = selectedMovie
+    ? userTitles.find((item) => String(item.id) === String(selectedMovie.id))
     : null;
 
   return (
@@ -212,9 +217,10 @@ export default function Home() {
                   label={title}
                   movies={section.movies}
                   userRatings={userRatings}
-                  watchlist={watchlist}
+                  userTitles={userTitles}
                   onSelect={setSelectedMovie}
                   onToggleWatchlist={handleToggleWatchlist}
+                  onToggleWatched={handleToggleWatched}
                   onSaveRating={handleSaveRating}
                   onClearRating={handleClearRating}
                 />
@@ -231,9 +237,10 @@ export default function Home() {
         <MovieDetailsDialog
           movie={selectedMovie}
           userRating={userRatings[selectedMovie.id]}
-          isInWatchlist={Boolean(selectedWatchlistMovie)}
-          isWatched={Boolean(selectedWatchlistMovie?.watched)}
+          isInWatchlist={Boolean(selectedUserTitle?.in_watchlist)}
+          isWatched={Boolean(selectedUserTitle?.watched)}
           onToggleWatchlist={handleToggleWatchlist}
+          onToggleWatched={handleToggleWatched}
           onSaveRating={handleSaveRating}
           onClearRating={handleClearRating}
           onClose={() => setSelectedMovie(null)}

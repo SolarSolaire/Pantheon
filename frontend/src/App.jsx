@@ -8,6 +8,7 @@ import Search from "./pages/Search";
 import Profile from "./pages/Profile";
 import Watchlist from "./pages/Watchlist";
 import Reviews from "./pages/Reviews";
+import Watched from "./pages/Watched";
 
 export default function App() {
   return (
@@ -29,6 +30,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Watchlist />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/watched"
+          element={
+            <ProtectedRoute>
+              <Watched />
             </ProtectedRoute>
           }
         />

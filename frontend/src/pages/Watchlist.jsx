@@ -65,15 +65,39 @@ const watchlistStyles = {
 export default function Watchlist() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const [removedMovies, setRemovedMovies] = useState({});
   const { userRatings, ratingsError, handleSaveRating, handleClearRating } =
     useUserRatings();
   const {
-    watchlist: movies,
+    userTitles,
     watchlistError: error,
     watchlistLoading,
     handleToggleWatchlist,
-    handleRemoveMovie
+    handleToggleWatched
   } = useUserWatchlist();
+  const movies = [
+    ...userTitles.filter((movie) => movie.in_watchlist),
+    ...Object.values(removedMovies)
+  ];
+
+  async function removeFromWatchlist(movie) {
+    if (await handleToggleWatchlist(movie)) {
+      setRemovedMovies((previous) => ({
+        ...previous,
+        [String(movie.id)]: movie
+      }));
+    }
+  }
+
+  async function undoRemoval(movie) {
+    if (await handleToggleWatchlist(movie)) {
+      setRemovedMovies((previous) => {
+        const next = { ...previous };
+        delete next[String(movie.id)];
+        return next;
+      });
+    }
+  }
 
   function handleSearchSubmit(event) {
     event.preventDefault();
@@ -154,11 +178,14 @@ export default function Watchlist() {
           <MovieGrid
             movies={movies}
             userRatings={userRatings}
-            watchlist={movies}
-            onToggleWatchlist={handleToggleWatchlist}
+            userTitles={userTitles}
+            onToggleWatchlist={removeFromWatchlist}
+            onToggleWatched={handleToggleWatched}
             onSaveRating={handleSaveRating}
             onClearRating={handleClearRating}
-            onRemove={(movie) => handleRemoveMovie(movie.id)}
+            onRemove={removeFromWatchlist}
+            removedMovieIds={Object.keys(removedMovies)}
+            onUndoRemoval={undoRemoval}
           />
         )}
       </main>

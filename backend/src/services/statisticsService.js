@@ -3,7 +3,7 @@ const db = require('../config/db');
 class StatisticsService {
   async calculateMoviesWatched(userId) {
     const result = await db.query(
-      "SELECT COUNT(*)::integer AS count FROM user_titles WHERE user_id = $1 AND status = 'watched'",
+      'SELECT COUNT(*)::integer AS count FROM user_titles WHERE user_id = $1 AND watched',
       [userId]
     );
     return result.rows[0].count;

@@ -41,13 +41,15 @@ async function createCurrentSchema(client) {
       tracking_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
       title_id UUID NOT NULL REFERENCES titles(title_id) ON DELETE CASCADE,
-      status TEXT NOT NULL CHECK (status IN ('watchlist', 'watched')),
+      in_watchlist BOOLEAN NOT NULL DEFAULT TRUE,
+      watched BOOLEAN NOT NULL DEFAULT FALSE,
       added_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
       watched_at TIMESTAMPTZ,
       UNIQUE (user_id, title_id),
+      CHECK (in_watchlist OR watched),
       CHECK (
-        (status = 'watched' AND watched_at IS NOT NULL) OR
-        (status = 'watchlist' AND watched_at IS NULL)
+        (watched AND watched_at IS NOT NULL) OR
+        (NOT watched AND watched_at IS NULL)
       )
     )
   `);
