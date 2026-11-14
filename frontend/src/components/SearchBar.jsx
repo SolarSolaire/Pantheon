@@ -1,5 +1,6 @@
 import React, { useId } from "react";
 import { Search, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const IMAGE_URL = "https://image.tmdb.org/t/p/w500";
 
@@ -159,6 +160,7 @@ export default function SearchBar({
   onKeyDown,
   onClear
 }) {
+  const navigate = useNavigate();
   const suggestionsId = useId();
   const hasQuery = Boolean(value.trim());
   const hasSuggestions = mode === "nav" && dropdownOpen && hasQuery;
@@ -175,6 +177,18 @@ export default function SearchBar({
   function handleClear() {
     onChange("");
     onClear?.();
+  }
+
+  function handleSuggestionSelect(movie) {
+    if (onSuggestionSelect) {
+      onSuggestionSelect(movie);
+      return;
+    }
+
+    const movieId = movie.id ?? movie.tmdb_id ?? movie.movie_id;
+    if (movieId != null) {
+      navigate(`/movies/${encodeURIComponent(String(movieId))}`);
+    }
   }
 
   if (mode === "hero") {
@@ -270,7 +284,7 @@ export default function SearchBar({
                 role="option"
                 aria-selected="false"
                 key={movie.id}
-                onClick={() => onSuggestionSelect?.(movie)}
+                onClick={() => handleSuggestionSelect(movie)}
               >
                 {movie.poster_path ? (
                   <img

@@ -29,6 +29,21 @@ exports.getUpcomingMovies = (req, res) =>
 exports.getNowPlayingMovies = (req, res) =>
   sendResults(res, () => tmdbService.getNowPlayingTitles(getPage(req.query)));
 
+exports.getMovieDetails = async (req, res) => {
+  const { movieId } = req.params;
+  if (!/^\d+$/.test(movieId)) {
+    return res.status(400).json({ message: 'A valid movie ID is required.' });
+  }
+  try {
+    res.json({ movie: await tmdbService.getMoviePageDetails(movieId) });
+  } catch (error) {
+    console.error(`TMDB details request failed for movie ${movieId}:`, error.message);
+    res.status(error.status || 502).json({
+      message: error.message || 'TMDB is temporarily unavailable.'
+    });
+  }
+};
+
 exports.getMovieProductionCompany = async (req, res) => {
   const { movieId } = req.params;
   if (!/^\d+$/.test(movieId)) {

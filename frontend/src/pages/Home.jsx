@@ -4,7 +4,6 @@ import { isAuthenticated } from "../utils/auth";
 import { logoutUser } from "../api/userData";
 import useUserRatings from "../hooks/useUserRatings";
 import useUserWatchlist from "../hooks/useUserWatchlist";
-import { MovieDetailsDialog } from "../components/MovieCard";
 import MovieCarousel from "../components/MovieCarousel";
 import Navbar from "../components/Navbar";
 import {
@@ -45,7 +44,6 @@ export default function Home() {
     handleToggleWatchlist,
     handleToggleWatched
   } = useUserWatchlist();
-  const [selectedMovie, setSelectedMovie] = useState(null);
   const [search, setSearch] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
@@ -149,12 +147,8 @@ export default function Home() {
 
   function handleSuggestionSelect(movie) {
     setDropdownOpen(false);
-    navigateToSearch(movie.title);
+    navigate(`/movies/${movie.id}`);
   }
-
-  const selectedUserTitle = selectedMovie
-    ? userTitles.find((item) => String(item.id) === String(selectedMovie.id))
-    : null;
 
   return (
     <div>
@@ -218,7 +212,6 @@ export default function Home() {
                   movies={section.movies}
                   userRatings={userRatings}
                   userTitles={userTitles}
-                  onSelect={setSelectedMovie}
                   onToggleWatchlist={handleToggleWatchlist}
                   onToggleWatched={handleToggleWatched}
                   onSaveRating={handleSaveRating}
@@ -233,19 +226,6 @@ export default function Home() {
         })}
       </main>
 
-      {selectedMovie && (
-        <MovieDetailsDialog
-          movie={selectedMovie}
-          userRating={userRatings[selectedMovie.id]}
-          isInWatchlist={Boolean(selectedUserTitle?.in_watchlist)}
-          isWatched={Boolean(selectedUserTitle?.watched)}
-          onToggleWatchlist={handleToggleWatchlist}
-          onToggleWatched={handleToggleWatched}
-          onSaveRating={handleSaveRating}
-          onClearRating={handleClearRating}
-          onClose={() => setSelectedMovie(null)}
-        />
-      )}
     </div>
   );
 }

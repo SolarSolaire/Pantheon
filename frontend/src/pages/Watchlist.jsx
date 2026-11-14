@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bookmark } from "lucide-react";
 import { logoutUser } from "../api/userData";
@@ -66,6 +66,7 @@ export default function Watchlist() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [removedMovies, setRemovedMovies] = useState({});
+  const [movieOrder, setMovieOrder] = useState([]);
   const { userRatings, ratingsError, handleSaveRating, handleClearRating } =
     useUserRatings();
   const {
@@ -75,10 +76,34 @@ export default function Watchlist() {
     handleToggleWatchlist,
     handleToggleWatched
   } = useUserWatchlist();
-  const movies = [
+  const currentMovies = [
     ...userTitles.filter((movie) => movie.in_watchlist),
     ...Object.values(removedMovies)
   ];
+  useEffect(() => {
+    setMovieOrder((previous) => {
+      const knownIds = new Set(previous);
+      const next = [...previous];
+      const moviesToOrder = [
+        ...userTitles.filter((movie) => movie.in_watchlist),
+        ...Object.values(removedMovies)
+      ];
+      moviesToOrder.forEach((movie) => {
+        const id = String(movie.id);
+        if (!knownIds.has(id)) {
+          knownIds.add(id);
+          next.push(id);
+        }
+      });
+      return next.length === previous.length ? previous : next;
+    });
+  }, [userTitles, removedMovies]);
+  const orderById = new Map(movieOrder.map((id, index) => [id, index]));
+  const movies = [...currentMovies].sort(
+    (first, second) =>
+      (orderById.get(String(first.id)) ?? Number.MAX_SAFE_INTEGER) -
+      (orderById.get(String(second.id)) ?? Number.MAX_SAFE_INTEGER)
+  );
 
   async function removeFromWatchlist(movie) {
     if (await handleToggleWatchlist(movie)) {
@@ -179,7 +204,6 @@ export default function Watchlist() {
             movies={movies}
             userRatings={userRatings}
             userTitles={userTitles}
-            onToggleWatchlist={removeFromWatchlist}
             onToggleWatched={handleToggleWatched}
             onSaveRating={handleSaveRating}
             onClearRating={handleClearRating}

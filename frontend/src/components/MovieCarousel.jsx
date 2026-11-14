@@ -14,6 +14,7 @@ export default function MovieCarousel({
   onSaveRating,
   onClearRating
 }) {
+
   const carouselRef = useRef(null);
   const pendingEndArrowRef = useRef(null);
   const [nearbyArrow, setNearbyArrow] = useState(null);

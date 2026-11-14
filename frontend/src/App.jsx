@@ -9,6 +9,7 @@ import Profile from "./pages/Profile";
 import Watchlist from "./pages/Watchlist";
 import Reviews from "./pages/Reviews";
 import Watched from "./pages/Watched";
+import MovieDetails from "./pages/MovieDetails";
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/newaccount" element={<NewAccount />} />
         <Route path="/search" element={<Search />} />
+        <Route path="/movies/:movieId" element={<MovieDetails />} />
         <Route
           path="/profile"
           element={

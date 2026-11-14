@@ -5,7 +5,6 @@ import { isAuthenticated } from "../utils/auth";
 import { logoutUser } from "../api/userData";
 import useUserRatings from "../hooks/useUserRatings";
 import useUserWatchlist from "../hooks/useUserWatchlist";
-import { MovieDetailsDialog } from "../components/MovieCard";
 import MovieGrid from "../components/MovieGrid";
 import SearchBar from "../components/SearchBar";
 import Navbar from "../components/Navbar";
@@ -124,7 +123,6 @@ export default function Search() {
     handleToggleWatchlist,
     handleToggleWatched
   } = useUserWatchlist();
-  const [selectedMovie, setSelectedMovie] = useState(null);
   const [isSignedIn, setIsSignedIn] = useState(isAuthenticated);
   const [movies, setMovies] = useState([]);
   const [moviesLoading, setMoviesLoading] = useState(true);
@@ -218,10 +216,6 @@ export default function Search() {
 
     return list;
   }, [movies, selectedGenre, sortBy]);
-
-  const selectedUserTitle = selectedMovie
-    ? userTitles.find((item) => String(item.id) === String(selectedMovie.id))
-    : null;
 
   return (
     <div>
@@ -338,7 +332,6 @@ export default function Search() {
             movies={filteredMovies}
             userRatings={userRatings}
             userTitles={userTitles}
-            onSelect={setSelectedMovie}
             onToggleWatchlist={handleToggleWatchlist}
             onToggleWatched={handleToggleWatched}
             onSaveRating={handleSaveRating}
@@ -347,19 +340,6 @@ export default function Search() {
         )}
       </main>
 
-      {selectedMovie && (
-        <MovieDetailsDialog
-          movie={selectedMovie}
-          userRating={userRatings[selectedMovie.id]}
-          isInWatchlist={Boolean(selectedUserTitle?.in_watchlist)}
-          isWatched={Boolean(selectedUserTitle?.watched)}
-          onToggleWatchlist={handleToggleWatchlist}
-          onToggleWatched={handleToggleWatched}
-          onSaveRating={handleSaveRating}
-          onClearRating={handleClearRating}
-          onClose={() => setSelectedMovie(null)}
-        />
-      )}
     </div>
   );
 }

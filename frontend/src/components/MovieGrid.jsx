@@ -6,6 +6,7 @@ export default function MovieGrid({
   movies,
   userRatings = {},
   userTitles = [],
+  showWatchedIndicator = true,
   onSelect,
   onToggleWatchlist,
   onToggleWatched,
@@ -30,6 +31,7 @@ export default function MovieGrid({
             userRating={userRatings[movie.id]}
             isInWatchlist={Boolean(userTitle?.in_watchlist)}
             isWatched={Boolean(userTitle?.watched)}
+            showWatchedIndicator={showWatchedIndicator}
             onSelect={onSelect}
             onToggleWatchlist={onToggleWatchlist}
             onToggleWatched={onToggleWatched}

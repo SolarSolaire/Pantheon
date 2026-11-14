@@ -2,6 +2,7 @@ import React, { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   Bookmark,
+  Check,
   Eye,
   EyeOff,
   MessageSquareText,
@@ -9,6 +10,7 @@ import {
   Star,
   X
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { fetchMovieProductionCompany } from "../api/tmdb";
 import { saveUserReview } from "../api/userData";
 import { isAuthenticated } from "../utils/auth";
@@ -17,6 +19,8 @@ import ReviewComposerDialog from "./ReviewComposerDialog";
 const IMAGE_URL = "https://image.tmdb.org/t/p/w500";
 const FALLBACK_IMAGE =
   "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=500&auto=format&fit=crop&q=60";
+const WATCHED_BUTTON_BACKGROUND =
+  "linear-gradient(#242229, #242229) padding-box, linear-gradient(135deg, #10b981, #315c4d, #10b981) border-box";
 
 const movieStyles = {
   movieCard: {
@@ -195,8 +199,8 @@ const movieStyles = {
     borderColor: "#44414b"
   },
   actionButtonActive: {
-    backgroundColor: "rgba(16, 185, 129, 0.15)",
-    borderColor: "#10b981",
+    background: WATCHED_BUTTON_BACKGROUND,
+    border: "2px solid transparent",
     color: "#10b981"
   },
   actionButtonPrimary: {
@@ -232,17 +236,33 @@ const movieStyles = {
     backgroundColor: "rgba(25, 24, 30, 0.88)",
     boxShadow: "0 2px 8px rgba(0, 0, 0, 0.7)"
   },
-  watchedButton: {
+  watchedIndicator: {
     position: "absolute",
-    top: "42px",
-    right: 0,
+    top: 0,
+    left: 0,
     zIndex: 2,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
     width: "42px",
     height: "42px",
-    borderLeft: "1px solid #2b2931",
+    borderRight: "1px solid #2b2931",
     borderBottom: "1px solid #2b2931",
-    borderRadius: "0 0 0 10px",
-    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.7)"
+    borderRadius: "0 0 10px 0",
+    backgroundColor: "rgba(25, 24, 30, 0.88)",
+    color: "#10b981",
+    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.7)",
+    pointerEvents: "none",
+    transition: "opacity 0.2s ease"
+  },
+  watchedButton: {
+    position: "absolute",
+    left: "12px",
+    right: "12px",
+    bottom: "12px",
+    width: "calc(100% - 24px)",
+    boxSizing: "border-box",
+    cursor: "pointer"
   },
   removedOverlay: {
     position: "absolute",
@@ -651,7 +671,7 @@ function getPosterUrl(posterPath) {
     : `${IMAGE_URL}${posterPath}`;
 }
 
-function MovieRatingDialog({
+export function MovieRatingDialog({
   movie,
   userRating,
   onSave,
@@ -1251,6 +1271,7 @@ export default function MovieCard({
   userRating,
   isInWatchlist = false,
   isWatched = false,
+  showWatchedIndicator = true,
   onSelect,
   onToggleWatchlist,
   onToggleWatched,
@@ -1260,6 +1281,7 @@ export default function MovieCard({
   isRemoved = false,
   onUndoRemoval
 }) {
+  const navigate = useNavigate();
   const [cardHovered, setCardHovered] = useState(false);
   const [trackingButtonHovered, setTrackingButtonHovered] = useState(false);
   const [ratingPopoverOpen, setRatingPopoverOpen] = useState(false);
@@ -1273,6 +1295,13 @@ export default function MovieCard({
     (cardHovered && !trackingButtonHovered) || ratingPopoverOpen;
   const posterUrl = getPosterUrl(movie.poster_path);
   const canReview = isAuthenticated();
+
+  function handleMovieSelect() {
+    const movieId = movie.id ?? movie.tmdb_id ?? movie.movie_id;
+    if (movieId != null) {
+      navigate(`/movies/${encodeURIComponent(String(movieId))}`);
+    }
+  }
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -1301,7 +1330,11 @@ export default function MovieCard({
 
   return (
     <article
-      style={movieStyles.movieCard}
+      style={{ ...movieStyles.movieCard, cursor: "pointer" }}
+      onClick={(event) => {
+        if (event.target.closest("button, a, input")) return;
+        handleMovieSelect();
+      }}
       onMouseEnter={() => setCardHovered(true)}
       onMouseLeave={() => {
         setCardHovered(false);
@@ -1325,9 +1358,8 @@ export default function MovieCard({
         <div
           style={{
             ...movieStyles.posterContainer,
-            ...(onSelect ? {} : { cursor: "default" })
+            cursor: "pointer"
           }}
-          onClick={onSelect ? () => onSelect(movie) : undefined}
         >
           {posterUrl ? (
             <img
@@ -1369,7 +1401,10 @@ export default function MovieCard({
               </span>
             </div>
             <div
-              style={movieStyles.posterHoverContent}
+              style={{
+                ...movieStyles.posterHoverContent,
+                ...(onRemove && onToggleWatched ? { bottom: "104px" } : {})
+              }}
             >
               <div style={movieStyles.posterTitleGroup}>
                 <span style={movieStyles.posterTitle}>{movie.title}</span>
@@ -1378,6 +1413,33 @@ export default function MovieCard({
                 </span>
               </div>
             </div>
+            {onToggleWatched && (
+              <button
+                type="button"
+                aria-label={isWatched ? "Mark as unwatched" : "Mark as watched"}
+                aria-pressed={isWatched}
+                title={isWatched ? "Mark as unwatched" : "Mark as watched"}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onToggleWatched(movie);
+                }}
+                style={{
+                  ...movieStyles.posterControl,
+                  ...movieStyles.watchedButton,
+                  ...(onRemove ? { bottom: "60px" } : {}),
+                  background: isWatched
+                    ? WATCHED_BUTTON_BACKGROUND
+                    : "#242229",
+                  border: isWatched
+                    ? "2px solid transparent"
+                    : "1px solid #44414b",
+                  color: isWatched ? "#10b981" : "#f0edf4"
+                }}
+              >
+                {isWatched ? <Eye size={16} /> : <EyeOff size={16} />}
+                <span>{isWatched ? "Mark as Unwatched" : "Mark as Watched"}</span>
+              </button>
+            )}
             {onRemove && (
               <button
                 type="button"
@@ -1425,30 +1487,17 @@ export default function MovieCard({
               <Bookmark size={22} fill={isInWatchlist ? "currentColor" : "none"} />
             </button>
           )}
-          {onToggleWatched && (
-            <button
-              type="button"
-              onMouseEnter={() => setTrackingButtonHovered(true)}
-              onMouseLeave={() => setTrackingButtonHovered(false)}
-              aria-label={isWatched ? "Mark as unwatched" : "Mark as watched"}
-              aria-pressed={isWatched}
-              title={isWatched ? "Mark as unwatched" : "Mark as watched"}
-              onClick={(event) => {
-                event.stopPropagation();
-                onToggleWatched(movie);
-              }}
+          {isWatched && showWatchedIndicator && (
+            <div
+              role="img"
+              aria-label="Watched"
               style={{
-                ...movieStyles.posterIconButton,
-                ...movieStyles.watchedButton,
-                backgroundColor: isWatched
-                  ? "rgba(16, 185, 129, 0.24)"
-                  : "rgba(25, 24, 30, 0.55)",
-                borderColor: isWatched ? "#10b981" : "#393740",
-                color: isWatched ? "#10b981" : "#d0cdd5"
+                ...movieStyles.watchedIndicator,
+                opacity: cardActive ? 0 : 1
               }}
             >
-              {isWatched ? <Eye size={22} /> : <EyeOff size={22} />}
-            </button>
+              <Check size={22} strokeWidth={3} aria-hidden="true" />
+            </div>
           )}
           {movie.genre && (
             <div style={movieStyles.genreBadge}>{movie.genre}</div>

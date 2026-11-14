@@ -44,6 +44,11 @@ export async function fetchMovieProductionCompany(movieId, signal) {
   return data.productionCompany;
 }
 
+export async function fetchMovieDetails(movieId, signal) {
+  const { data } = await api.get(`/movies/details/${movieId}`, { signal });
+  return data.movie;
+}
+
 export async function searchMovies(query, signal) {
   return fetchMovies("search", signal, { query });
 }
