@@ -176,8 +176,8 @@ export default function Profile() {
       <Navbar
         actions={[
           { label: "Home", onClick: () => navigate("/home") },
-          { label: "Watchlist", onClick: () => navigate("/watchlist") },
-          { label: "Reviews", onClick: () => navigate("/reviews") },
+          { label: "Saved", onClick: () => navigate("/saved") },
+          { label: "Rated", onClick: () => navigate("/rated") },
           { label: "Logout", onClick: handleLogout }
         ]}
       />

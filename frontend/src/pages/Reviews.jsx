@@ -1,17 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { MessageSquareText } from "lucide-react";
+import { Star } from "lucide-react";
 import {
   deleteUserReview,
   fetchUserReviews,
-  logoutUser,
-  saveUserReview
+  logoutUser
 } from "../api/userData";
 import useUserRatings from "../hooks/useUserRatings";
 import Navbar from "../components/Navbar";
 import ReviewCard from "../components/ReviewCard";
-import ReviewComposerDialog from "../components/ReviewComposerDialog";
-import { MovieRatingDropdown } from "../components/MovieCard";
+import { MovieRatingDialog } from "../components/MovieCard";
 
 const styles = {
   container: {
@@ -85,25 +83,58 @@ export default function Reviews() {
     return () => controller.abort();
   }, []);
 
-  async function handleSave(movie, reviewText) {
-    const savedReview = await saveUserReview(movie, reviewText);
-    setReviews((previous) => [
-      savedReview,
-      ...previous.filter((review) => String(review.movie_id) !== String(movie.id))
-    ]);
-    setError("");
-    return savedReview;
+  async function handleDialogSave(movie, rating, reviewText) {
+    try {
+      await handleSaveRating(movie, rating, reviewText);
+      setReviews((previous) => {
+        const existing = previous.find(
+          (r) => String(r.movie_id) === String(movie.id)
+        );
+        const updatedEntry = {
+          ...(existing || {}),
+          movie_id: movie.id,
+          user_rating: Number(rating),
+          review_text: reviewText || null,
+          updated_at: new Date().toISOString(),
+          movie_data: existing?.movie_data || movie
+        };
+        return [
+          updatedEntry,
+          ...previous.filter((r) => String(r.movie_id) !== String(movie.id))
+        ];
+      });
+      setError("");
+      setEditingReview(null);
+    } catch (saveError) {
+      setError(saveError.message || "Could not save your rating.");
+    }
+  }
+
+  async function handleDialogClear(movie) {
+    try {
+      await handleClearRating(movie);
+      setReviews((previous) =>
+        previous.filter((r) => String(r.movie_id) !== String(movie.id))
+      );
+      setError("");
+      setEditingReview(null);
+    } catch (clearError) {
+      setError(clearError.message || "Could not clear your rating.");
+    }
   }
 
   async function handleDelete(movieId) {
     try {
-      await deleteUserReview(movieId);
+      await handleClearRating({ id: movieId });
+      try {
+        await deleteUserReview(movieId);
+      } catch {}
       setReviews((previous) =>
         previous.filter((review) => String(review.movie_id) !== String(movieId))
       );
       setError("");
     } catch (deleteError) {
-      setError(deleteError.message || "Could not delete your review.");
+      setError(deleteError.message || "Could not delete your rating.");
     }
   }
 
@@ -121,24 +152,24 @@ export default function Reviews() {
       <Navbar
         actions={[
           { label: "Home", onClick: () => navigate("/home") },
-          { label: "Watchlist", onClick: () => navigate("/watchlist") },
+          { label: "Saved", onClick: () => navigate("/saved") },
           { label: "Account", onClick: () => navigate("/profile") },
           { label: "Logout", onClick: handleLogout }
         ]}
       />
       <main style={styles.container}>
-        <h1 style={styles.title}>My Reviews</h1>
+        <h1 style={styles.title}>My Ratings</h1>
         {error && <div style={{ ...styles.message, ...styles.error }}>{error}</div>}
         {ratingsError && (
           <div style={{ ...styles.message, ...styles.error }}>{ratingsError}</div>
         )}
-        {loading && <div style={styles.message}>Loading your reviews...</div>}
+        {loading && <div style={styles.message}>Loading your ratings...</div>}
         {!loading && !error && reviews.length === 0 && (
           <div style={styles.empty}>
-            <MessageSquareText size={42} color="#f4c96b" />
-            <h2 style={styles.emptyTitle}>You have not written any reviews yet</h2>
+            <Star size={42} color="#f4c96b" />
+            <h2 style={styles.emptyTitle}>You have not rated any movies yet</h2>
             <p style={styles.emptySubtitle}>
-              Open a movie card and choose the review button to get started.
+              Rate movies from Home or Search and they will appear here.
             </p>
           </div>
         )}
@@ -157,17 +188,14 @@ export default function Reviews() {
         )}
       </main>
       {editingReview && (
-        <ReviewComposerDialog
+        <MovieRatingDialog
           movie={editingReview.movie_data}
-          productionCompany={editingReview.movie_data?.production_company}
-          initialReview={editingReview.review_text}
-          RatingControl={MovieRatingDropdown}
           userRating={
             userRatings[editingReview.movie_id] ?? editingReview.user_rating
           }
-          onSaveRating={handleSaveRating}
-          onClearRating={handleClearRating}
-          onSave={handleSave}
+          initialReview={editingReview.review_text || ""}
+          onSave={handleDialogSave}
+          onClear={handleDialogClear}
           onClose={() => setEditingReview(null)}
         />
       )}

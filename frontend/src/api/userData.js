@@ -121,11 +121,15 @@ export async function fetchUserRatings(signal) {
   return data.ratings;
 }
 
-export async function saveUserRating(movieId, rating, movie) {
-  await api.put(`/user-data/ratings/${encodeURIComponent(movieId)}`, {
+export async function saveUserRating(movieId, rating, movie, reviewText) {
+  const payload = {
     rating,
     movie: sanitizeMovie(movie)
-  });
+  };
+  if (reviewText !== undefined) {
+    payload.review_text = reviewText;
+  }
+  await api.put(`/user-data/ratings/${encodeURIComponent(movieId)}`, payload);
 }
 
 export async function clearUserRating(movieId) {

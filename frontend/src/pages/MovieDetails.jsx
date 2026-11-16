@@ -2,9 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
+  Award,
   Bookmark,
-  Eye,
-  EyeOff,
   Star,
   UserRound
 } from "lucide-react";
@@ -349,8 +348,7 @@ export default function MovieDetails() {
     userTitles,
     watchlistError,
     watchlistLoading,
-    handleToggleWatchlist,
-    handleToggleWatched
+    handleToggleWatchlist
   } = useUserWatchlist();
 
   useEffect(() => {
@@ -397,7 +395,8 @@ export default function MovieDetails() {
         actions={[
           { label: "Home", onClick: () => navigate("/home") },
           { label: "Search", onClick: () => navigate("/search") },
-          { label: "Watchlist", onClick: () => navigate("/watchlist") }
+          { label: "Saved", onClick: () => navigate("/saved") },
+          { label: "Rated", onClick: () => navigate("/rated") }
         ]}
       />
       <main style={pageStyles.container}>
@@ -434,6 +433,13 @@ export default function MovieDetails() {
               <div style={pageStyles.details}>
                 <h1 style={pageStyles.title}>{movie.title}</h1>
                 <div style={pageStyles.metadata}>
+                  <div style={pageStyles.metadataItem}>
+                    <span style={pageStyles.metadataLabel}>TMDB Score</span>
+                    <span style={{ ...pageStyles.metadataValue, display: "flex", alignItems: "center", gap: "6px" }}>
+                      <Award size={15} color="#f4c96b" />
+                      {movie.vote_average != null ? `${Number(movie.vote_average).toFixed(1)} / 10` : "N/A"}
+                    </span>
+                  </div>
                   <div style={pageStyles.metadataItem}>
                     <span style={pageStyles.metadataLabel}>Studio</span>
                     <span style={pageStyles.metadataValue}>
@@ -485,31 +491,8 @@ export default function MovieDetails() {
                     />
                     <span>
                       {userTitle?.in_watchlist
-                        ? "Remove from Watchlist"
-                        : "Add to Watchlist"}
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    disabled={watchlistLoading}
-                    aria-pressed={Boolean(userTitle?.watched)}
-                    onClick={() => handleToggleWatched(movie)}
-                    style={{
-                      ...pageStyles.actionButton,
-                      ...(userTitle?.watched
-                        ? { borderColor: "#10b981", color: "#10b981" }
-                        : {})
-                    }}
-                  >
-                    {userTitle?.watched ? (
-                      <Eye size={17} />
-                    ) : (
-                      <EyeOff size={17} />
-                    )}
-                    <span>
-                      {userTitle?.watched
-                        ? "Mark as Unwatched"
-                        : "Mark as Watched"}
+                        ? "Remove from Saved"
+                        : "Add to Saved"}
                     </span>
                   </button>
                   <button

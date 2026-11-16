@@ -172,8 +172,8 @@ export default function Home() {
           onClear: () => setDropdownOpen(false)
         }}
         actions={[
-          { label: "Watchlist", onClick: () => navigate("/watchlist") },
-          { label: "Reviews", onClick: () => navigate("/reviews") },
+          { label: "Saved", onClick: () => navigate("/saved") },
+          { label: "Rated", onClick: () => navigate("/rated") },
           { label: "Account", onClick: () => navigate("/profile") },
           { label: "Logout", onClick: handleAuthAction }
         ]}

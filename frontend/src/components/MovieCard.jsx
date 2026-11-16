@@ -1,20 +1,19 @@
 import React, { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
+  Award,
   Bookmark,
   Check,
   Eye,
   EyeOff,
-  MessageSquareText,
   RotateCcw,
   Star,
   X
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { fetchMovieProductionCompany } from "../api/tmdb";
-import { saveUserReview } from "../api/userData";
+import { fetchUserReview } from "../api/userData";
 import { isAuthenticated } from "../utils/auth";
-import ReviewComposerDialog from "./ReviewComposerDialog";
 
 const IMAGE_URL = "https://image.tmdb.org/t/p/w500";
 const FALLBACK_IMAGE =
@@ -81,7 +80,7 @@ const movieStyles = {
   },
   posterControlRow: {
     display: "grid",
-    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
     alignItems: "center",
     justifyItems: "center",
     gap: "6px",
@@ -589,29 +588,25 @@ const movieStyles = {
     fontSize: "0.75rem",
     color: "#85818d"
   },
-  presetsWrapper: {
+  commentInputContainer: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "6px",
     marginBottom: "20px"
   },
-  presetsLabel: {
-    display: "block",
-    fontSize: "0.8rem",
-    color: "#aaa7b2",
-    marginBottom: "8px"
-  },
-  presetsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(6, 1fr)",
-    gap: "6px"
-  },
-  presetButton: {
-    backgroundColor: "#242229",
-    border: "1px solid #44414b",
+  commentTextarea: {
+    width: "100%",
+    boxSizing: "border-box",
+    backgroundColor: "#101014",
+    border: "1px solid #393740",
+    borderRadius: "8px",
+    padding: "10px 12px",
+    fontSize: "0.9rem",
     color: "#f5f3ef",
-    borderRadius: "6px",
-    padding: "6px 0",
-    fontSize: "0.8rem",
-    fontWeight: "700",
-    cursor: "pointer"
+    fontFamily: "inherit",
+    resize: "vertical",
+    minHeight: "75px",
+    outline: "none"
   },
   ratingErrorText: {
     color: "#ffb4b4",
@@ -674,13 +669,39 @@ function getPosterUrl(posterPath) {
 export function MovieRatingDialog({
   movie,
   userRating,
+  initialReview = "",
   onSave,
   onClear,
   onClose
 }) {
   const inputId = useId();
-  const [ratingInput, setRatingInput] = useState(userRating || "8.0");
+  const [ratingInput, setRatingInput] = useState(
+    userRating != null ? String(userRating) : "8.0"
+  );
+  const [reviewText, setReviewText] = useState(initialReview || "");
   const [ratingError, setRatingError] = useState("");
+
+  useEffect(() => {
+    if (initialReview) {
+      setReviewText(initialReview);
+      return;
+    }
+    const movieId = movie?.id ?? movie?.tmdb_id ?? movie?.movie_id;
+    if (!movieId) return;
+
+    let isMounted = true;
+    fetchUserReview(movieId)
+      .then((review) => {
+        if (isMounted && review?.review_text) {
+          setReviewText(review.review_text);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, [movie, initialReview]);
 
   function handleSave(event) {
     event.preventDefault();
@@ -691,7 +712,7 @@ export function MovieRatingDialog({
     }
 
     try {
-      onSave(movie, rating.toFixed(1));
+      onSave(movie, rating.toFixed(1), reviewText.trim());
       onClose();
     } catch (error) {
       setRatingError(error.message || "Could not save your rating.");
@@ -736,7 +757,7 @@ export function MovieRatingDialog({
           </button>
         </div>
         <p style={movieStyles.ratingModalSubtitle}>
-          Enter a decimal rating from 0.0 to 10.0 (e.g. 7.3 or 8.8):
+          Select your rating from 0.0 to 10.0 and share your thoughts:
         </p>
 
         <form onSubmit={handleSave}>
@@ -792,23 +813,22 @@ export function MovieRatingDialog({
             </div>
           </div>
 
-          <div style={movieStyles.presetsWrapper}>
-            <span style={movieStyles.presetsLabel}>Quick picks:</span>
-            <div style={movieStyles.presetsGrid}>
-              {[6.5, 7.3, 7.8, 8.2, 8.8, 9.4].map((preset) => (
-                <button
-                  type="button"
-                  key={preset}
-                  onClick={() => {
-                    setRatingInput(preset.toFixed(1));
-                    setRatingError("");
-                  }}
-                  style={movieStyles.presetButton}
-                >
-                  {preset.toFixed(1)}
-                </button>
-              ))}
-            </div>
+          <div style={movieStyles.commentInputContainer}>
+            <label
+              htmlFor={`${inputId}-comment`}
+              style={movieStyles.decimalInputLabel}
+            >
+              Your thoughts (optional):
+            </label>
+            <textarea
+              id={`${inputId}-comment`}
+              rows={3}
+              value={reviewText}
+              onChange={(event) => setReviewText(event.target.value)}
+              placeholder="Write a comment or review..."
+              maxLength={5000}
+              style={movieStyles.commentTextarea}
+            />
           </div>
 
           {ratingError && (
@@ -1165,7 +1185,8 @@ export function MovieDetailsDialog({
 
                 <div style={movieStyles.modalMetaRow}>
                   <div style={movieStyles.modalRatingBox}>
-                    <Star size={18} fill="#f4c96b" color="#f4c96b" />
+                    <Award size={18} color="#f4c96b" />
+                    <span style={{ fontSize: "0.78rem", color: "#aaa7b2", fontWeight: 700, marginRight: "2px" }}>TMDB</span>
                     <span style={movieStyles.modalRatingScore}>
                       {movie.vote_average != null
                         ? Number(movie.vote_average).toFixed(1)
@@ -1207,23 +1228,8 @@ export function MovieDetailsDialog({
                         fill={isInWatchlist ? "currentColor" : "none"}
                       />
                       <span>
-                        {isInWatchlist ? "Remove from Watchlist" : "Add to Watchlist"}
+                        {isInWatchlist ? "Remove from Saved" : "Add to Saved"}
                       </span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onToggleWatched(movie)}
-                      aria-pressed={isWatched}
-                      style={{
-                        ...movieStyles.modalActionButton,
-                        ...movieStyles.modalTrackingButton,
-                        ...(isWatched
-                          ? movieStyles.actionButtonActive
-                          : movieStyles.actionButtonSecondary)
-                      }}
-                    >
-                      {isWatched ? <Eye size={16} /> : <EyeOff size={16} />}
-                      <span>{isWatched ? "Mark as Unwatched" : "Mark as Watched"}</span>
                     </button>
                   </div>
 
@@ -1284,17 +1290,14 @@ export default function MovieCard({
   const navigate = useNavigate();
   const [cardHovered, setCardHovered] = useState(false);
   const [trackingButtonHovered, setTrackingButtonHovered] = useState(false);
-  const [ratingPopoverOpen, setRatingPopoverOpen] = useState(false);
-  const [reviewComposerOpen, setReviewComposerOpen] = useState(false);
+  const [ratingDialogOpen, setRatingDialogOpen] = useState(false);
   const [productionCompany, setProductionCompany] = useState({
     status: "idle",
     name: null
   });
   const isMountedRef = useRef(true);
-  const cardActive =
-    (cardHovered && !trackingButtonHovered) || ratingPopoverOpen;
+  const cardActive = cardHovered && !trackingButtonHovered;
   const posterUrl = getPosterUrl(movie.poster_path);
-  const canReview = isAuthenticated();
 
   function handleMovieSelect() {
     const movieId = movie.id ?? movie.tmdb_id ?? movie.movie_id;
@@ -1403,7 +1406,7 @@ export default function MovieCard({
             <div
               style={{
                 ...movieStyles.posterHoverContent,
-                ...(onRemove && onToggleWatched ? { bottom: "104px" } : {})
+                ...(onRemove && onSaveRating ? { bottom: "104px" } : {})
               }}
             >
               <div style={movieStyles.posterTitleGroup}>
@@ -1413,31 +1416,36 @@ export default function MovieCard({
                 </span>
               </div>
             </div>
-            {onToggleWatched && (
+            {onSaveRating && (
               <button
                 type="button"
-                aria-label={isWatched ? "Mark as unwatched" : "Mark as watched"}
-                aria-pressed={isWatched}
-                title={isWatched ? "Mark as unwatched" : "Mark as watched"}
+                aria-label={
+                  userRating
+                    ? `Change your rating, currently ${userRating} out of 10`
+                    : "Rate this movie"
+                }
+                title={userRating ? `Your rating: ${userRating} / 10` : "Rate this movie"}
                 onClick={(event) => {
                   event.stopPropagation();
-                  onToggleWatched(movie);
+                  setRatingDialogOpen(true);
                 }}
                 style={{
                   ...movieStyles.posterControl,
                   ...movieStyles.watchedButton,
                   ...(onRemove ? { bottom: "60px" } : {}),
-                  background: isWatched
-                    ? WATCHED_BUTTON_BACKGROUND
-                    : "#242229",
-                  border: isWatched
-                    ? "2px solid transparent"
-                    : "1px solid #44414b",
-                  color: isWatched ? "#10b981" : "#f0edf4"
+                  backgroundColor: userRating ? "#f4c96b" : "rgba(36, 34, 41, 0.95)",
+                  color: userRating ? "#19181e" : "#f4c96b",
+                  border: userRating ? "1px solid #f4c96b" : "1px solid #4a4651",
+                  fontWeight: 700,
+                  cursor: "pointer"
                 }}
               >
-                {isWatched ? <Eye size={16} /> : <EyeOff size={16} />}
-                <span>{isWatched ? "Mark as Unwatched" : "Mark as Watched"}</span>
+                <Star
+                  size={16}
+                  fill={userRating ? "currentColor" : "none"}
+                  color="currentColor"
+                />
+                <span>{userRating ? `Your Rating: ${userRating}/10` : "Rate Movie"}</span>
               </button>
             )}
             {onRemove && (
@@ -1464,11 +1472,11 @@ export default function MovieCard({
               onMouseEnter={() => setTrackingButtonHovered(true)}
               onMouseLeave={() => setTrackingButtonHovered(false)}
               aria-label={
-                isInWatchlist ? "Remove from watchlist" : "Add to watchlist"
+                isInWatchlist ? "Remove from saved" : "Add to saved"
               }
               aria-pressed={isInWatchlist}
               title={
-                isInWatchlist ? "Remove from watchlist" : "Add to watchlist"
+                isInWatchlist ? "Remove from saved" : "Add to saved"
               }
               onClick={(event) => {
                 event.stopPropagation();
@@ -1534,8 +1542,10 @@ export default function MovieCard({
               ? Number(movie.vote_average).toFixed(1)
               : "not available"
           }`}
+          title="TMDB Rating"
         >
-          <Star size={13} fill="#f4c96b" color="#f4c96b" />
+          <Award size={14} color="#f4c96b" />
+          <span style={{ fontSize: "0.68rem", color: "#aaa7b2", fontWeight: 700 }}>TMDB</span>
           <span>
             {movie.vote_average != null
               ? Number(movie.vote_average).toFixed(1)
@@ -1543,45 +1553,41 @@ export default function MovieCard({
           </span>
         </div>
         {onSaveRating ? (
-          <MovieRatingDropdown
-            movie={movie}
-            userRating={userRating}
-            onSave={onSaveRating}
-            onClear={onClearRating}
-            isOpen={ratingPopoverOpen}
-            onOpenChange={setRatingPopoverOpen}
-          />
+          <button
+            type="button"
+            aria-label={
+              userRating
+                ? `Change your rating, currently ${userRating} out of 10`
+                : "Rate this movie"
+            }
+            title={userRating ? `Your rating: ${userRating} / 10` : "Rate this movie"}
+            onClick={() => setRatingDialogOpen(true)}
+            style={{
+              ...movieStyles.posterControl,
+              ...movieStyles.userRatingButton,
+              color: userRating ? "#19181e" : "#f4c96b",
+              backgroundColor: userRating ? "#f4c96b" : "rgba(25, 24, 30, 0.92)",
+              borderColor: userRating ? "#f4c96b" : "#4a4651"
+            }}
+          >
+            <Star
+              size={14}
+              fill={userRating ? "currentColor" : "none"}
+              color="currentColor"
+            />
+            <span>{userRating ? `${userRating}` : "Rate"}</span>
+          </button>
         ) : (
           <span />
         )}
-        <button
-          type="button"
-          disabled={!canReview}
-          aria-label={
-            canReview ? `Write a review for ${movie.title}` : "Sign in to write a review"
-          }
-          title={canReview ? "Write a review" : "Sign in to write a review"}
-          onClick={() => setReviewComposerOpen(true)}
-          style={{
-            ...movieStyles.posterControl,
-            ...movieStyles.reviewButton,
-            cursor: canReview ? "pointer" : "not-allowed",
-            opacity: canReview ? 1 : 0.55
-          }}
-        >
-          <MessageSquareText size={15} />
-        </button>
       </div>
-      {reviewComposerOpen && (
-        <ReviewComposerDialog
+      {ratingDialogOpen && (
+        <MovieRatingDialog
           movie={movie}
-          productionCompany={productionCompany.name}
           userRating={userRating}
-          RatingControl={MovieRatingDropdown}
-          onSaveRating={onSaveRating}
-          onClearRating={onClearRating}
-          onSave={saveUserReview}
-          onClose={() => setReviewComposerOpen(false)}
+          onSave={onSaveRating}
+          onClear={onClearRating}
+          onClose={() => setRatingDialogOpen(false)}
         />
       )}
     </article>

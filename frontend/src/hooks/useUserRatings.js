@@ -27,9 +27,9 @@ export default function useUserRatings() {
     return () => controller.abort();
   }, []);
 
-  const handleSaveRating = useCallback(async (movie, rating) => {
+  const handleSaveRating = useCallback(async (movie, rating, reviewText) => {
     try {
-      await saveUserRating(movie.id, rating, movie);
+      await saveUserRating(movie.id, rating, movie, reviewText);
       setUserRatings((previous) => ({ ...previous, [movie.id]: rating }));
       setRatingsError("");
     } catch (error) {
