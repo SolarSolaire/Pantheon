@@ -3,17 +3,33 @@ import {
   addMovieToUserWatchlist,
   ensureLegacyUserDataMigrated,
   fetchUserTitles,
+  fetchUserReviews,
   removeMovieFromUserWatchlist,
   setUserTitleWatched
 } from "../api/userData";
 
 export default function useUserWatchlist() {
   const [userTitles, setUserTitles] = useState([]);
+  const [reviewedMovieIds, setReviewedMovieIds] = useState(() => new Set());
   const [watchlistError, setWatchlistError] = useState("");
   const [watchlistLoading, setWatchlistLoading] = useState(true);
 
   useEffect(() => {
     const controller = new AbortController();
+    fetchUserReviews(controller.signal)
+      .then((reviews) => {
+        if (!controller.signal.aborted) {
+          setReviewedMovieIds(
+            new Set(reviews.map((review) => String(review.movie_id)))
+          );
+        }
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) {
+          console.error("Could not load reviewed movie statuses:", error);
+        }
+      });
+
     ensureLegacyUserDataMigrated()
       .then(() => fetchUserTitles(controller.signal))
       .then(setUserTitles)
@@ -62,6 +78,7 @@ export default function useUserWatchlist() {
 
   return {
     userTitles,
+    reviewedMovieIds,
     watchlistError,
     watchlistLoading,
     handleToggleWatchlist,

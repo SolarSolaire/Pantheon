@@ -11,7 +11,6 @@ import useUserRatings from "../hooks/useUserRatings";
 import Navbar from "../components/Navbar";
 import ReviewCard from "../components/ReviewCard";
 import ReviewComposerDialog from "../components/ReviewComposerDialog";
-import { MovieRatingDropdown } from "../components/MovieCard";
 
 const styles = {
   container: {
@@ -67,7 +66,7 @@ export default function Reviews() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [editingReview, setEditingReview] = useState(null);
-  const { userRatings, ratingsError, handleSaveRating, handleClearRating } =
+  const { userRatings, ratingsError, handleSaveRating } =
     useUserRatings();
 
   useEffect(() => {
@@ -161,12 +160,10 @@ export default function Reviews() {
           movie={editingReview.movie_data}
           productionCompany={editingReview.movie_data?.production_company}
           initialReview={editingReview.review_text}
-          RatingControl={MovieRatingDropdown}
           userRating={
             userRatings[editingReview.movie_id] ?? editingReview.user_rating
           }
           onSaveRating={handleSaveRating}
-          onClearRating={handleClearRating}
           onSave={handleSave}
           onClose={() => setEditingReview(null)}
         />

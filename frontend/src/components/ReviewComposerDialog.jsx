@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { X } from "lucide-react";
+import { Star, X } from "lucide-react";
 import { fetchMovieProductionCompany } from "../api/tmdb";
 import { fetchUserReview } from "../api/userData";
-
-const IMAGE_URL = "https://image.tmdb.org/t/p/w500";
 
 const styles = {
   overlay: {
@@ -46,42 +44,34 @@ const styles = {
     color: "#f5f3ef",
     cursor: "pointer"
   },
-  header: {
-    display: "grid",
-    gridTemplateColumns: "minmax(100px, 170px) minmax(0, 1fr)",
-    gap: "22px",
-    alignItems: "start",
-    paddingRight: "28px"
-  },
-  poster: {
-    width: "100%",
-    aspectRatio: "2/3",
-    objectFit: "cover",
-    border: "1px solid #393740",
-    borderRadius: "10px",
-    backgroundColor: "#25232b"
-  },
-  details: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "flex-start",
-    gap: "9px"
-  },
-  title: {
-    margin: "2px 0 0",
-    color: "#f5f3ef",
-    fontSize: "1.45rem",
-    lineHeight: 1.2
-  },
   metadata: {
     margin: 0,
     color: "#aaa7b2",
     fontSize: "0.9rem"
   },
   sectionTitle: {
-    margin: "24px 0 10px",
+    margin: "0 0 10px",
     color: "#f5f3ef",
     fontSize: "1rem"
+  },
+  ratingStars: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "2px",
+    marginBottom: "14px"
+  },
+  ratingStarButton: {
+    display: "grid",
+    placeItems: "center",
+    flex: 1,
+    minWidth: 0,
+    padding: "4px 0",
+    border: "none",
+    borderRadius: "6px",
+    backgroundColor: "transparent",
+    cursor: "pointer",
+    transition: "transform 140ms ease, filter 140ms ease"
   },
   textarea: {
     width: "100%",
@@ -124,18 +114,12 @@ const styles = {
   }
 };
 
-function getYear(date) {
-  return date ? date.slice(0, 4) : "Year unknown";
-}
-
 export default function ReviewComposerDialog({
   movie,
   productionCompany,
   initialReview,
   userRating,
-  RatingControl,
   onSaveRating,
-  onClearRating,
   onSave,
   onSaved,
   onClose
@@ -144,10 +128,14 @@ export default function ReviewComposerDialog({
   const [reviewLoaded, setReviewLoaded] = useState(initialReview !== undefined);
   const [reviewLoadError, setReviewLoadError] = useState("");
   const [company, setCompany] = useState(productionCompany || "");
-  const [companyError, setCompanyError] = useState("");
-  const [ratingPopoverOpen, setRatingPopoverOpen] = useState(false);
+  const [rating, setRating] = useState(Math.round(Number(userRating) || 0));
+  const [hoveredRating, setHoveredRating] = useState(0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    setRating(Math.round(Number(userRating) || 0));
+  }, [userRating]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -173,8 +161,9 @@ export default function ReviewComposerDialog({
         })
         .catch((loadError) => {
           if (!controller.signal.aborted) {
-            setCompanyError(
-              loadError.message || "Could not load the production company."
+            console.error(
+              `Could not load production company for movie ${movie.id}:`,
+              loadError
             );
           }
         });
@@ -230,53 +219,43 @@ export default function ReviewComposerDialog({
         >
           <X size={18} />
         </button>
-        <div style={styles.header}>
-          {movie.poster_path ? (
-            <img
-              src={`${IMAGE_URL}${movie.poster_path}`}
-              alt={`${movie.title} poster`}
-              style={styles.poster}
-              onError={(event) => {
-                event.currentTarget.style.visibility = "hidden";
-              }}
-            />
-          ) : (
-            <div
-              role="img"
-              aria-label="Movie poster unavailable"
-              style={{
-                ...styles.poster,
-                display: "grid",
-                placeItems: "center",
-                color: "#aaa7b2",
-                fontSize: "0.85rem",
-                textAlign: "center"
-              }}
-            >
-              Poster unavailable
-            </div>
-          )}
-          <div style={styles.details}>
-            <h2 style={styles.title}>{movie.title}</h2>
-            <p style={styles.metadata}>{getYear(movie.release_date)}</p>
-            <p style={styles.metadata}>
-              {company || (companyError ? "Production company unavailable" : "Loading production company...")}
-            </p>
-            {RatingControl && onSaveRating && (
-              <RatingControl
-                movie={movie}
-                userRating={userRating}
-                onSave={onSaveRating}
-                onClear={onClearRating}
-                isOpen={ratingPopoverOpen}
-                onOpenChange={setRatingPopoverOpen}
-              />
-            )}
-          </div>
-        </div>
 
         <form onSubmit={handleSubmit}>
           <h3 style={styles.sectionTitle}>Your review</h3>
+          <div
+            role="group"
+            aria-label="Rate this movie"
+            style={styles.ratingStars}
+          >
+            {Array.from({ length: 10 }, (_, index) => {
+              const starRating = index + 1;
+              const displayedRating = hoveredRating || rating;
+              const isSelected = starRating <= displayedRating;
+              return (
+                <button
+                  key={starRating}
+                  type="button"
+                  aria-label={`Rate ${starRating} out of 10`}
+                  aria-pressed={starRating === rating}
+                  title={`${starRating} / 10`}
+                  onMouseEnter={() => setHoveredRating(starRating)}
+                  onMouseLeave={() => setHoveredRating(0)}
+                  onFocus={() => setHoveredRating(starRating)}
+                  onBlur={() => setHoveredRating(0)}
+                  onClick={() => {
+                    setRating(starRating);
+                    onSaveRating?.(movie, starRating.toFixed(1));
+                  }}
+                  style={{
+                    ...styles.ratingStarButton,
+                    color: isSelected ? "#f4c96b" : "#85818d"
+                  }}
+                >
+                  <Star size={20} fill={isSelected ? "currentColor" : "none"} />
+                </button>
+              );
+            })}
+          </div>
           <textarea
             value={reviewText}
             onChange={(event) => {
@@ -291,7 +270,6 @@ export default function ReviewComposerDialog({
           />
           {!reviewLoaded && <p style={styles.metadata}>Loading your review...</p>}
           {reviewLoadError && <p style={styles.error}>{reviewLoadError}</p>}
-          {companyError && <p style={styles.error}>{companyError}</p>}
           {error && <p style={styles.error}>{error}</p>}
           <div style={styles.actions}>
             <span style={styles.count}>{reviewText.length}/5000</span>

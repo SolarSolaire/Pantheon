@@ -119,6 +119,7 @@ export default function Search() {
     useUserRatings();
   const {
     userTitles,
+    reviewedMovieIds,
     watchlistError,
     handleToggleWatchlist,
     handleToggleWatched
@@ -332,6 +333,7 @@ export default function Search() {
             movies={filteredMovies}
             userRatings={userRatings}
             userTitles={userTitles}
+            reviewedMovieIds={reviewedMovieIds}
             onToggleWatchlist={handleToggleWatchlist}
             onToggleWatched={handleToggleWatched}
             onSaveRating={handleSaveRating}

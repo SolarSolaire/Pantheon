@@ -1,0 +1,19 @@
+.movie-card-button {
+  transition: transform 140ms ease, filter 140ms ease;
+}
+
+.movie-card-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+}
+
+.movie-card-button:active:not(:disabled) {
+  transform: translateY(0);
+  filter: brightness(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .movie-card-button {
+    transition: none;
+  }
+}

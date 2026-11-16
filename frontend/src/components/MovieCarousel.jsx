@@ -8,6 +8,7 @@ export default function MovieCarousel({
   movies,
   userRatings,
   userTitles,
+  reviewedMovieIds,
   onSelect,
   onToggleWatchlist,
   onToggleWatched,
@@ -194,6 +195,7 @@ export default function MovieCarousel({
         movies={movies}
         userRatings={userRatings}
         userTitles={userTitles}
+        reviewedMovieIds={reviewedMovieIds}
         onSelect={onSelect}
         onToggleWatchlist={onToggleWatchlist}
         onToggleWatched={onToggleWatched}

@@ -89,22 +89,16 @@ const pageStyles = {
     paddingTop: "8px"
   },
   title: {
-    margin: "0 0 18px",
+    margin: "0 0 10px",
     fontSize: "clamp(1.8rem, 4vw, 2.8rem)",
     lineHeight: 1.12,
     overflowWrap: "anywhere"
   },
   metadata: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
-    gap: "12px",
-    margin: "0 0 22px"
-  },
-  metadataItem: {
-    padding: "12px 14px",
-    border: "1px solid #2b2931",
-    borderRadius: "9px",
-    backgroundColor: "#19181e"
+    display: "flex",
+    flexDirection: "column",
+    gap: "5px",
+    margin: "0 0 18px"
   },
   metadataLabel: {
     display: "block",
@@ -120,12 +114,30 @@ const pageStyles = {
     fontSize: "0.92rem",
     lineHeight: 1.45
   },
-  overviewTitle: {
-    margin: "0 0 8px",
-    fontSize: "1.1rem"
+  runtime: {
+    marginBottom: "18px",
+    color: "#d0cdd5",
+    fontSize: "0.98rem"
+  },
+  genreSection: {
+    marginBottom: "20px"
+  },
+  genreList: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "8px",
+    marginTop: "8px"
+  },
+  genreChip: {
+    padding: "6px 10px",
+    border: "1px solid #44414b",
+    borderRadius: "999px",
+    backgroundColor: "#242229",
+    color: "#f4c96b",
+    fontSize: "0.85rem"
   },
   overview: {
-    margin: 0,
+    margin: "0 0 20px",
     color: "#d0cdd5",
     fontSize: "0.98rem",
     lineHeight: 1.7,
@@ -159,26 +171,21 @@ const pageStyles = {
     margin: "0 0 16px",
     fontSize: "1.45rem"
   },
-  trailerFrame: {
-    display: "block",
-    width: "100%",
-    aspectRatio: "16 / 9",
-    border: "1px solid #2b2931",
-    borderRadius: "12px",
-    backgroundColor: "#19181e"
-  },
   category: {
-    marginTop: "28px"
+    marginTop: "16px",
   },
   categoryTitle: {
-    margin: "0 0 14px",
-    fontSize: "1.1rem",
-    color: "#f4c96b"
+    padding: "10px 0",
+    color: "#f4c96b",
+    fontSize: "1.05rem",
+    fontWeight: 700,
+    cursor: "pointer"
   },
   peopleGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fill, minmax(112px, 1fr))",
-    gap: "18px 14px"
+    gap: "18px 14px",
+    padding: "0 0 16px"
   },
   personCard: {
     minWidth: 0,
@@ -279,29 +286,27 @@ function getCrewCategories(crew) {
   })).sort((first, second) => first.category.localeCompare(second.category));
 }
 
-function getTrailer(videos = []) {
-  const trailers = videos.filter(
-    (video) =>
-      video.type === "Trailer" &&
-      video.key &&
-      (video.site === "YouTube" || video.site === "Vimeo")
+function getCrewPeople(crew, predicate) {
+  return getCrewCategories(crew.filter(predicate)).flatMap(
+    ({ people }) => people
   );
-  return trailers.find((video) => video.official) || trailers[0] || null;
 }
 
-function getTrailerUrl(trailer) {
-  if (trailer.site === "YouTube") {
-    return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(trailer.key)}`;
-  }
-  return `https://player.vimeo.com/video/${encodeURIComponent(trailer.key)}`;
-}
+function StaffCategory({
+  title,
+  people,
+  isCast = false,
+  defaultOpen = false
+}) {
+  const peopleWithPortraitsFirst = [...people].sort(
+    (first, second) => Number(!first.profile_path) - Number(!second.profile_path)
+  );
 
-function StaffCategory({ title, people, isCast = false }) {
   return (
-    <section style={pageStyles.category}>
-      <h3 style={pageStyles.categoryTitle}>{title}</h3>
+    <details style={pageStyles.category} open={defaultOpen}>
+      <summary style={pageStyles.categoryTitle}>{title}</summary>
       <div style={pageStyles.peopleGrid}>
-        {people.map((person, index) => {
+        {peopleWithPortraitsFirst.map((person, index) => {
           const role = isCast
             ? person.character
             : person.jobs?.join(", ") || person.job;
@@ -332,7 +337,7 @@ function StaffCategory({ title, people, isCast = false }) {
           );
         })}
       </div>
-    </section>
+    </details>
   );
 }
 
@@ -377,15 +382,36 @@ export default function MovieDetails() {
     return () => controller.abort();
   }, [movieId]);
 
+  const crew = movie?.credits?.crew || [];
+  const directors = useMemo(
+    () => getCrewPeople(crew, (credit) => credit.job === "Director"),
+    [crew]
+  );
+  const writers = useMemo(
+    () =>
+      getCrewPeople(
+        crew,
+        (credit) =>
+          credit.department === "Writing" || credit.job === "Writer"
+      ),
+    [crew]
+  );
   const crewCategories = useMemo(
-    () => getCrewCategories(movie?.credits?.crew || []),
-    [movie]
+    () =>
+      getCrewCategories(
+        crew.filter(
+          (credit) =>
+            credit.job !== "Director" &&
+            credit.department !== "Writing" &&
+            credit.job !== "Writer"
+        )
+      ),
+    [crew]
   );
   const userTitle = userTitles.find(
     (title) => String(title.id) === String(movie?.id)
   );
   const userRating = movie ? userRatings[movie.id] : null;
-  const trailer = getTrailer(movie?.videos?.results || []);
   const cast = movie?.credits?.cast || [];
   const productionCompanies =
     movie?.production_companies?.map((company) => company.name).filter(Boolean) ||
@@ -433,38 +459,34 @@ export default function MovieDetails() {
 
               <div style={pageStyles.details}>
                 <h1 style={pageStyles.title}>{movie.title}</h1>
+                <p style={pageStyles.runtime}>
+                  <strong>Runtime:</strong> {formatRuntime(movie.runtime)}
+                </p>
                 <div style={pageStyles.metadata}>
-                  <div style={pageStyles.metadataItem}>
-                    <span style={pageStyles.metadataLabel}>Studio</span>
-                    <span style={pageStyles.metadataValue}>
-                      {productionCompanies.join(", ") || "Unknown"}
-                    </span>
-                  </div>
-                  <div style={pageStyles.metadataItem}>
-                    <span style={pageStyles.metadataLabel}>Release date</span>
-                    <span style={pageStyles.metadataValue}>
-                      {formatReleaseDate(movie.release_date)}
-                    </span>
-                  </div>
-                  <div style={pageStyles.metadataItem}>
-                    <span style={pageStyles.metadataLabel}>Runtime</span>
-                    <span style={pageStyles.metadataValue}>
-                      {formatRuntime(movie.runtime)}
-                    </span>
-                  </div>
-                  <div style={pageStyles.metadataItem}>
-                    <span style={pageStyles.metadataLabel}>Genres</span>
-                    <span style={pageStyles.metadataValue}>
-                      {movie.genres?.map((genre) => genre.name).join(", ") ||
-                        "Unknown"}
-                    </span>
+                  <span style={pageStyles.metadataValue}>
+                    {formatReleaseDate(movie.release_date)}
+                  </span>
+                  <span style={pageStyles.metadataValue}>
+                    {productionCompanies.join(", ") || "Unknown"}
+                  </span>
+                </div>
+                <p style={pageStyles.overview}>
+                  {movie.overview || "No overview available."}
+                </p>
+                <div style={pageStyles.genreSection}>
+                  <span style={pageStyles.metadataLabel}>Genres</span>
+                  <div style={pageStyles.genreList}>
+                    {movie.genres?.length ? (
+                      movie.genres.map((genre) => (
+                        <span key={genre.id} style={pageStyles.genreChip}>
+                          {genre.name}
+                        </span>
+                      ))
+                    ) : (
+                      <span style={pageStyles.genreChip}>Unknown</span>
+                    )}
                   </div>
                 </div>
-
-                <h2 style={pageStyles.overviewTitle}>Description</h2>
-                <p style={pageStyles.overview}>
-                  {movie.overview || "No description available."}
-                </p>
 
                 <div style={pageStyles.actions}>
                   <button
@@ -540,25 +562,29 @@ export default function MovieDetails() {
               </div>
             </section>
 
-            {trailer && (
-              <section style={pageStyles.section}>
-                <h2 style={pageStyles.sectionTitle}>Trailer</h2>
-                <iframe
-                  src={getTrailerUrl(trailer)}
-                  title={`${movie.title} trailer`}
-                  style={pageStyles.trailerFrame}
-                  loading="lazy"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  referrerPolicy="strict-origin-when-cross-origin"
-                  allowFullScreen
-                />
-              </section>
-            )}
-
             <section style={pageStyles.section}>
               <h2 style={pageStyles.sectionTitle}>Cast and crew</h2>
               {cast.length > 0 && (
-                <StaffCategory title="Cast" people={cast} isCast />
+                <StaffCategory
+                  title="Cast"
+                  people={cast}
+                  isCast
+                  defaultOpen
+                />
+              )}
+              {directors.length > 0 && (
+                <StaffCategory
+                  title="Director"
+                  people={directors}
+                  defaultOpen
+                />
+              )}
+              {writers.length > 0 && (
+                <StaffCategory
+                  title="Writer"
+                  people={writers}
+                  defaultOpen
+                />
               )}
               {crewCategories.map(({ category, people }) => (
                 <StaffCategory
@@ -567,7 +593,10 @@ export default function MovieDetails() {
                   people={people}
                 />
               ))}
-              {cast.length === 0 && crewCategories.length === 0 && (
+              {cast.length === 0 &&
+                directors.length === 0 &&
+                writers.length === 0 &&
+                crewCategories.length === 0 && (
                 <p style={pageStyles.emptyText}>No cast or crew information available.</p>
               )}
             </section>

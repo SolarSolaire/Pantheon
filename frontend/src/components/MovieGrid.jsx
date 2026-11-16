@@ -2,10 +2,13 @@ import React from "react";
 import MovieCard from "./MovieCard";
 import styles from "../styles.jsx";
 
+const EMPTY_REVIEWED_MOVIE_IDS = new Set();
+
 export default function MovieGrid({
   movies,
   userRatings = {},
   userTitles = [],
+  reviewedMovieIds = EMPTY_REVIEWED_MOVIE_IDS,
   showWatchedIndicator = true,
   onSelect,
   onToggleWatchlist,
@@ -31,6 +34,7 @@ export default function MovieGrid({
             userRating={userRatings[movie.id]}
             isInWatchlist={Boolean(userTitle?.in_watchlist)}
             isWatched={Boolean(userTitle?.watched)}
+            hasReview={reviewedMovieIds.has(String(movie.id))}
             showWatchedIndicator={showWatchedIndicator}
             onSelect={onSelect}
             onToggleWatchlist={onToggleWatchlist}

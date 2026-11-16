@@ -40,6 +40,7 @@ export default function Home() {
     useUserRatings();
   const {
     userTitles,
+    reviewedMovieIds,
     watchlistError,
     handleToggleWatchlist,
     handleToggleWatched
@@ -212,6 +213,7 @@ export default function Home() {
                   movies={section.movies}
                   userRatings={userRatings}
                   userTitles={userTitles}
+                  reviewedMovieIds={reviewedMovieIds}
                   onToggleWatchlist={handleToggleWatchlist}
                   onToggleWatched={handleToggleWatched}
                   onSaveRating={handleSaveRating}

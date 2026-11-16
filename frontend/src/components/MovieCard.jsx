@@ -2,7 +2,6 @@ import React, { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   Bookmark,
-  Check,
   Eye,
   EyeOff,
   MessageSquareText,
@@ -15,6 +14,7 @@ import { fetchMovieProductionCompany } from "../api/tmdb";
 import { saveUserReview } from "../api/userData";
 import { isAuthenticated } from "../utils/auth";
 import ReviewComposerDialog from "./ReviewComposerDialog";
+import "./MovieCard.css";
 
 const IMAGE_URL = "https://image.tmdb.org/t/p/w500";
 const FALLBACK_IMAGE =
@@ -674,6 +674,7 @@ function getPosterUrl(posterPath) {
 export function MovieRatingDialog({
   movie,
   userRating,
+  hasReview = false,
   onSave,
   onClear,
   onClose
@@ -727,6 +728,7 @@ export function MovieRatingDialog({
             Rate "{movie.title}"
           </h3>
           <button
+            className="movie-card-button"
             type="button"
             style={movieStyles.modalCloseButton}
             onClick={onClose}
@@ -797,6 +799,7 @@ export function MovieRatingDialog({
             <div style={movieStyles.presetsGrid}>
               {[6.5, 7.3, 7.8, 8.2, 8.8, 9.4].map((preset) => (
                 <button
+                  className="movie-card-button"
                   type="button"
                   key={preset}
                   onClick={() => {
@@ -818,6 +821,7 @@ export function MovieRatingDialog({
           <div style={movieStyles.ratingModalActions}>
             {userRating && onClear && (
               <button
+                className="movie-card-button"
                 type="button"
                 onClick={handleClear}
                 style={movieStyles.clearRatingButton}
@@ -826,13 +830,18 @@ export function MovieRatingDialog({
               </button>
             )}
             <button
+              className="movie-card-button"
               type="button"
               onClick={onClose}
               style={movieStyles.cancelRatingButton}
             >
               Cancel
             </button>
-            <button type="submit" style={movieStyles.saveRatingButton}>
+            <button
+              className="movie-card-button"
+              type="submit"
+              style={movieStyles.saveRatingButton}
+            >
               Save Rating
             </button>
           </div>
@@ -983,6 +992,7 @@ export function MovieRatingDropdown({
   return (
     <>
       <button
+        className="movie-card-button"
         ref={buttonRef}
         type="button"
         aria-label={
@@ -1043,6 +1053,7 @@ export function MovieRatingDropdown({
                 const starSize = 13;
                 return (
                   <button
+                    className="movie-card-button"
                     key={starRating}
                     type="button"
                     aria-label={`Rate ${starRating} out of 10`}
@@ -1076,6 +1087,7 @@ export function MovieRatingDropdown({
               })}
               <div style={movieStyles.ratingResetRow}>
                 <button
+                  className="movie-card-button"
                   type="button"
                   aria-label="Close rating choices"
                   title="Close"
@@ -1090,6 +1102,7 @@ export function MovieRatingDropdown({
                   <X size={11} />
                 </button>
                 <button
+                  className="movie-card-button"
                   type="button"
                   aria-label="Reset rating"
                   title="Reset rating"
@@ -1139,6 +1152,7 @@ export function MovieDetailsDialog({
             onClick={(event) => event.stopPropagation()}
           >
             <button
+              className="movie-card-button"
               type="button"
               style={movieStyles.modalCloseButton}
               onClick={onClose}
@@ -1186,6 +1200,7 @@ export function MovieDetailsDialog({
                 <div style={movieStyles.modalActions}>
                   <div style={movieStyles.modalWatchlistActions}>
                     <button
+                      className="movie-card-button"
                       type="button"
                       onClick={() => onToggleWatchlist(movie)}
                       aria-pressed={isInWatchlist}
@@ -1211,6 +1226,7 @@ export function MovieDetailsDialog({
                       </span>
                     </button>
                     <button
+                      className="movie-card-button"
                       type="button"
                       onClick={() => onToggleWatched(movie)}
                       aria-pressed={isWatched}
@@ -1228,6 +1244,7 @@ export function MovieDetailsDialog({
                   </div>
 
                   <button
+                    className="movie-card-button"
                     type="button"
                     onClick={() => setRatingDialogOpen(true)}
                     style={{
@@ -1269,6 +1286,7 @@ export function MovieDetailsDialog({
 export default function MovieCard({
   movie,
   userRating,
+  hasReview = false,
   isInWatchlist = false,
   isWatched = false,
   showWatchedIndicator = true,
@@ -1286,13 +1304,14 @@ export default function MovieCard({
   const [trackingButtonHovered, setTrackingButtonHovered] = useState(false);
   const [ratingPopoverOpen, setRatingPopoverOpen] = useState(false);
   const [reviewComposerOpen, setReviewComposerOpen] = useState(false);
+  const [reviewSaved, setReviewSaved] = useState(false);
   const [productionCompany, setProductionCompany] = useState({
     status: "idle",
     name: null
   });
   const isMountedRef = useRef(true);
-  const cardActive =
-    (cardHovered && !trackingButtonHovered) || ratingPopoverOpen;
+  const cardActive = cardHovered && !trackingButtonHovered;
+  const reviewIsWritten = hasReview || reviewSaved;
   const posterUrl = getPosterUrl(movie.poster_path);
   const canReview = isAuthenticated();
 
@@ -1335,22 +1354,6 @@ export default function MovieCard({
         if (event.target.closest("button, a, input")) return;
         handleMovieSelect();
       }}
-      onMouseEnter={() => setCardHovered(true)}
-      onMouseLeave={() => {
-        setCardHovered(false);
-      }}
-      onFocus={() => setCardHovered(true)}
-      onBlur={(event) => {
-        const focusMovedToRatingPopover = event.relatedTarget?.closest?.(
-          "[data-movie-rating-popover]"
-        );
-        if (
-          !event.currentTarget.contains(event.relatedTarget) &&
-          !focusMovedToRatingPopover
-        ) {
-          setCardHovered(false);
-        }
-      }}
     >
       <div
         style={movieStyles.movieCardSurface}
@@ -1359,6 +1362,16 @@ export default function MovieCard({
           style={{
             ...movieStyles.posterContainer,
             cursor: "pointer"
+          }}
+          onMouseEnter={() => setCardHovered(true)}
+          onMouseLeave={() => {
+            setCardHovered(false);
+          }}
+          onFocus={() => setCardHovered(true)}
+          onBlur={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget)) {
+              setCardHovered(false);
+            }
           }}
         >
           {posterUrl ? (
@@ -1415,6 +1428,7 @@ export default function MovieCard({
             </div>
             {onToggleWatched && (
               <button
+                className="movie-card-button"
                 type="button"
                 aria-label={isWatched ? "Mark as unwatched" : "Mark as watched"}
                 aria-pressed={isWatched}
@@ -1442,6 +1456,7 @@ export default function MovieCard({
             )}
             {onRemove && (
               <button
+                className="movie-card-button"
                 type="button"
                 onClick={(event) => {
                   event.stopPropagation();
@@ -1460,6 +1475,7 @@ export default function MovieCard({
           </div>
           {onToggleWatchlist && (
             <button
+              className="movie-card-button"
               type="button"
               onMouseEnter={() => setTrackingButtonHovered(true)}
               onMouseLeave={() => setTrackingButtonHovered(false)}
@@ -1496,7 +1512,7 @@ export default function MovieCard({
                 opacity: cardActive ? 0 : 1
               }}
             >
-              <Check size={22} strokeWidth={3} aria-hidden="true" />
+              <Eye size={22} aria-hidden="true" />
             </div>
           )}
           {movie.genre && (
@@ -1506,6 +1522,7 @@ export default function MovieCard({
             <div style={movieStyles.removedOverlay}>
               <span style={movieStyles.removedMessage}>Removed</span>
               <button
+                className="movie-card-button"
                 type="button"
                 style={movieStyles.undoButton}
                 onClick={(event) => {
@@ -1555,16 +1572,30 @@ export default function MovieCard({
           <span />
         )}
         <button
+          className="movie-card-button"
           type="button"
           disabled={!canReview}
           aria-label={
-            canReview ? `Write a review for ${movie.title}` : "Sign in to write a review"
+            canReview
+              ? `${reviewIsWritten ? "Edit" : "Write"} your review for ${movie.title}`
+              : "Sign in to write a review"
           }
-          title={canReview ? "Write a review" : "Sign in to write a review"}
+          title={
+            canReview
+              ? `${reviewIsWritten ? "Edit" : "Write"} your review`
+              : "Sign in to write a review"
+          }
           onClick={() => setReviewComposerOpen(true)}
           style={{
             ...movieStyles.posterControl,
             ...movieStyles.reviewButton,
+            ...(reviewIsWritten
+              ? {
+                  backgroundColor: "rgba(16, 185, 129, 0.14)",
+                  borderColor: "#10b981",
+                  color: "#10b981"
+                }
+              : {}),
             cursor: canReview ? "pointer" : "not-allowed",
             opacity: canReview ? 1 : 0.55
           }}
@@ -1577,10 +1608,9 @@ export default function MovieCard({
           movie={movie}
           productionCompany={productionCompany.name}
           userRating={userRating}
-          RatingControl={MovieRatingDropdown}
           onSaveRating={onSaveRating}
-          onClearRating={onClearRating}
           onSave={saveUserReview}
+          onSaved={() => setReviewSaved(true)}
           onClose={() => setReviewComposerOpen(false)}
         />
       )}

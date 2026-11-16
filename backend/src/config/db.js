@@ -31,7 +31,7 @@ const connectionString = (process.env.DATABASE_URL || '').split('?')[0];
 
 const pool = new Pool({
   connectionString,
-  ssl: process.env.PG_SSL === 'true' ? { rejectUnauthorized: false } : false
+  ssl: { rejectUnauthorized: false }
 });
 
 pool.on('connect', () => {
