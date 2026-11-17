@@ -100,16 +100,36 @@ export function ensureLegacyUserDataMigrated() {
   return legacyMigrations.get(token);
 }
 
+function sanitizeMovie(movie) {
+  if (!movie || typeof movie !== "object") return movie;
+  return {
+    id: movie.id,
+    title: movie.title || "",
+    overview: movie.overview || "",
+    release_date: movie.release_date || "",
+    poster_path: movie.poster_path || null,
+    production_company:
+      typeof movie.production_company === "string"
+        ? movie.production_company
+        : movie.production_companies?.[0]?.name || null,
+    media_type: movie.media_type || "movie"
+  };
+}
+
 export async function fetchUserRatings(signal) {
   const { data } = await api.get("/user-data/ratings", { signal });
   return data.ratings;
 }
 
-export async function saveUserRating(movieId, rating, movie) {
-  await api.put(`/user-data/ratings/${encodeURIComponent(movieId)}`, {
+export async function saveUserRating(movieId, rating, movie, reviewText) {
+  const payload = {
     rating,
-    movie
-  });
+    movie: sanitizeMovie(movie)
+  };
+  if (reviewText !== undefined) {
+    payload.review_text = reviewText;
+  }
+  await api.put(`/user-data/ratings/${encodeURIComponent(movieId)}`, payload);
 }
 
 export async function clearUserRating(movieId) {
@@ -122,14 +142,14 @@ export async function fetchUserTitles(signal) {
 }
 
 export async function addMovieToUserWatchlist(movie) {
-  const { data } = await api.post("/user-data/watchlist", movie);
+  const { data } = await api.post("/user-data/watchlist", sanitizeMovie(movie));
   return data.titles;
 }
 
 export async function setUserTitleWatched(movie, watched) {
   const { data } = await api.put(
     `/user-data/titles/${encodeURIComponent(movie.id)}/watched`,
-    { movie, watched }
+    { movie: sanitizeMovie(movie), watched }
   );
   return data.titles;
 }
@@ -162,7 +182,7 @@ export async function fetchUserReview(movieId, signal) {
 export async function saveUserReview(movie, reviewText) {
   const { data } = await api.put(
     `/user-data/reviews/${encodeURIComponent(movie.id)}`,
-    { movie, review_text: reviewText }
+    { movie: sanitizeMovie(movie), review_text: reviewText }
   );
   return data.review;
 }

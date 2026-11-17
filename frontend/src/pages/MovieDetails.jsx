@@ -2,9 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
+  Award,
   Bookmark,
-  Eye,
-  EyeOff,
   Star,
   UserRound
 } from "lucide-react";
@@ -354,8 +353,7 @@ export default function MovieDetails() {
     userTitles,
     watchlistError,
     watchlistLoading,
-    handleToggleWatchlist,
-    handleToggleWatched
+    handleToggleWatchlist
   } = useUserWatchlist();
 
   async function saveRatingAndMarkWatched(ratingMovie, rating) {
@@ -439,7 +437,8 @@ export default function MovieDetails() {
         actions={[
           { label: "Home", onClick: () => navigate("/home") },
           { label: "Search", onClick: () => navigate("/search") },
-          { label: "Watchlist", onClick: () => navigate("/watchlist") }
+          { label: "Saved", onClick: () => navigate("/saved") },
+          { label: "Rated", onClick: () => navigate("/rated") }
         ]}
       />
       <main style={pageStyles.container}>

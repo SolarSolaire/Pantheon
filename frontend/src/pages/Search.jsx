@@ -224,7 +224,9 @@ export default function Search() {
       <Navbar
         showSearch={false}
         actions={[
-          { label: "Watchlist", onClick: () => navigate("/watchlist") },
+          { label: "Home", onClick: () => navigate("/home") },
+          { label: "Saved", onClick: () => navigate("/saved") },
+          { label: "Rated", onClick: () => navigate("/rated") },
           { label: "Account", onClick: () => navigate("/profile") },
           { label: "Logout", onClick: handleAuthAction }
         ]}
@@ -246,7 +248,7 @@ export default function Search() {
         <section style={styles.search.heroSection}>
           <h1 style={styles.search.heroTitle}>Discover & Track Movies</h1>
           <p style={styles.search.heroSubtitle}>
-            Search our catalog, add movies to your watchlist, and rate your favorites.
+            Search our catalog, save movies, and rate your favorites.
           </p>
 
           {/* Search Bar Input */}

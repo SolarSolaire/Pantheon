@@ -133,7 +133,8 @@ export default function Watched() {
       <Navbar
         actions={[
           { label: "Home", onClick: () => navigate("/home") },
-          { label: "Watchlist", onClick: () => navigate("/watchlist") },
+          { label: "Saved", onClick: () => navigate("/saved") },
+          { label: "Rated", onClick: () => navigate("/rated") },
           { label: "Account", onClick: () => navigate("/profile") },
           { label: "Logout", onClick: handleLogout }
         ]}
