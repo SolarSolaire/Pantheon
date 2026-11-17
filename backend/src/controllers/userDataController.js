@@ -104,11 +104,9 @@ exports.saveRating = (req, res) => {
   const movieId = getMovieId(req.params.movieId);
   const rating = Number(req.body?.rating);
   const movieData = req.body?.movie ? getMovieData(req.body.movie, movieId) : null;
-  const reviewText = getReviewText(req.body?.review_text);
-  const shouldClearReview = req.body?.review_text === '';
   if (!movieId) return res.status(400).json({ message: 'A valid movie ID is required.' });
-  if (!Number.isFinite(rating) || rating < 0 || rating > 10) {
-    return res.status(400).json({ message: 'Ratings must be between 0 and 10.' });
+  if (!Number.isFinite(rating) || rating < 1 || rating > 10) {
+    return res.status(400).json({ message: 'Ratings must be between 1 and 10.' });
   }
   if (req.body?.movie && !movieData) {
     return res.status(400).json({ message: 'Valid movie details are required to save a rating.' });
@@ -136,42 +134,14 @@ exports.saveRating = (req, res) => {
         });
       }
     }
-    if (reviewText) {
-      await db.query(
-        `INSERT INTO user_feedback (
-           user_id, title_id, rating, review_text, review_created_at, review_updated_at
-         )
-         VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-         ON CONFLICT (user_id, title_id)
-         DO UPDATE SET rating = EXCLUDED.rating,
-                       review_text = EXCLUDED.review_text,
-                       review_created_at = COALESCE(user_feedback.review_created_at, CURRENT_TIMESTAMP),
-                       review_updated_at = CURRENT_TIMESTAMP,
-                       updated_at = CURRENT_TIMESTAMP`,
-        [req.user.user_id, titleId, rating, reviewText]
-      );
-    } else if (shouldClearReview) {
-      await db.query(
-        `INSERT INTO user_feedback (user_id, title_id, rating)
-         VALUES ($1, $2, $3)
-         ON CONFLICT (user_id, title_id)
-         DO UPDATE SET rating = EXCLUDED.rating,
-                       review_text = NULL,
-                       review_created_at = NULL,
-                       review_updated_at = NULL,
-                       updated_at = CURRENT_TIMESTAMP`,
-        [req.user.user_id, titleId, rating]
-      );
-    } else {
-      await db.query(
-        `INSERT INTO user_feedback (user_id, title_id, rating)
-         VALUES ($1, $2, $3)
-         ON CONFLICT (user_id, title_id)
-         DO UPDATE SET rating = EXCLUDED.rating, updated_at = CURRENT_TIMESTAMP`,
-        [req.user.user_id, titleId, rating]
-      );
-    }
-    res.json({ rating, review_text: reviewText || null });
+    await db.query(
+      `INSERT INTO user_feedback (user_id, title_id, rating)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (user_id, title_id)
+       DO UPDATE SET rating = EXCLUDED.rating, updated_at = CURRENT_TIMESTAMP`,
+      [req.user.user_id, titleId, rating]
+    );
+    res.json({ rating });
   });
 };
 
@@ -354,7 +324,7 @@ async function getReviewByMovie(userId, movieId) {
      FROM user_feedback
      JOIN titles USING (title_id)
      WHERE user_feedback.user_id = $1 AND titles.tmdb_id = $2
-       AND (user_feedback.rating IS NOT NULL OR user_feedback.review_text IS NOT NULL)`,
+       AND user_feedback.review_text IS NOT NULL`,
     [userId, movieId]
   );
   const review = result.rows[0];
@@ -384,8 +354,8 @@ exports.getReviews = (req, res) =>
               user_feedback.rating AS user_rating
        FROM user_feedback
        JOIN titles USING (title_id)
-       WHERE user_feedback.user_id = $1 AND (user_feedback.rating IS NOT NULL OR user_feedback.review_text IS NOT NULL)
-       ORDER BY COALESCE(user_feedback.review_updated_at, user_feedback.updated_at) DESC, user_feedback.feedback_id DESC`,
+       WHERE user_feedback.user_id = $1 AND user_feedback.review_text IS NOT NULL
+       ORDER BY user_feedback.review_updated_at DESC, user_feedback.feedback_id DESC`,
       [req.user.user_id]
     );
     res.json({

@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Star } from "lucide-react";
+import { MessageSquareText } from "lucide-react";
 import {
   deleteUserReview,
   fetchUserReviews,
-  logoutUser
+  logoutUser,
+  saveUserReview
 } from "../api/userData";
 import useUserRatings from "../hooks/useUserRatings";
 import useUserWatchlist from "../hooks/useUserWatchlist";
@@ -119,7 +120,7 @@ export default function Reviews() {
       );
       setError("");
     } catch (deleteError) {
-      setError(deleteError.message || "Could not delete your rating.");
+      setError(deleteError.message || "Could not delete your review.");
     }
   }
 
@@ -137,13 +138,13 @@ export default function Reviews() {
       <Navbar
         actions={[
           { label: "Home", onClick: () => navigate("/home") },
-          { label: "Saved", onClick: () => navigate("/saved") },
+          { label: "Watchlist", onClick: () => navigate("/watchlist") },
           { label: "Account", onClick: () => navigate("/profile") },
           { label: "Logout", onClick: handleLogout }
         ]}
       />
       <main style={styles.container}>
-        <h1 style={styles.title}>My Ratings</h1>
+        <h1 style={styles.title}>My Reviews</h1>
         {error && <div style={{ ...styles.message, ...styles.error }}>{error}</div>}
         {ratingsError && (
           <div style={{ ...styles.message, ...styles.error }}>{ratingsError}</div>
@@ -154,8 +155,8 @@ export default function Reviews() {
         {loading && <div style={styles.message}>Loading your reviews...</div>}
         {!loading && !error && reviews.length === 0 && (
           <div style={styles.empty}>
-            <Star size={42} color="#f4c96b" />
-            <h2 style={styles.emptyTitle}>You have not rated any movies yet</h2>
+            <MessageSquareText size={42} color="#f4c96b" />
+            <h2 style={styles.emptyTitle}>You have not written any reviews yet</h2>
             <p style={styles.emptySubtitle}>
               Open a movie card and click its rating star to rate or write a review.
             </p>
@@ -176,7 +177,7 @@ export default function Reviews() {
         )}
       </main>
       {editingReview && (
-        <MovieRatingDialog
+        <ReviewComposerDialog
           movie={editingReview.movie_data}
           productionCompany={editingReview.movie_data?.production_company}
           initialReview={editingReview.review_text}

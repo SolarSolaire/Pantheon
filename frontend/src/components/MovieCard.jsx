@@ -1,17 +1,17 @@
 import React, { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  Award,
   Bookmark,
   Eye,
   EyeOff,
+  MessageSquareText,
   RotateCcw,
   Star,
   X
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { fetchMovieProductionCompany } from "../api/tmdb";
-import { fetchUserReview } from "../api/userData";
+import { saveUserReview } from "../api/userData";
 import { isAuthenticated } from "../utils/auth";
 import ReviewComposerDialog from "./ReviewComposerDialog";
 import "./MovieCard.css";
@@ -76,15 +76,6 @@ const movieStyles = {
     alignItems: "center",
     width: "calc(100% - 24px)",
     overflow: "hidden"
-  },
-  posterControlRow: {
-    display: "grid",
-    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    alignItems: "center",
-    justifyItems: "center",
-    gap: "6px",
-    width: "100%",
-    marginTop: "8px"
   },
   posterControl: {
     display: "flex",
@@ -570,25 +561,29 @@ const movieStyles = {
     fontSize: "0.75rem",
     color: "#85818d"
   },
-  commentInputContainer: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "6px",
+  presetsWrapper: {
     marginBottom: "20px"
   },
-  commentTextarea: {
-    width: "100%",
-    boxSizing: "border-box",
-    backgroundColor: "#101014",
-    border: "1px solid #393740",
-    borderRadius: "8px",
-    padding: "10px 12px",
-    fontSize: "0.9rem",
+  presetsLabel: {
+    display: "block",
+    fontSize: "0.8rem",
+    color: "#aaa7b2",
+    marginBottom: "8px"
+  },
+  presetsGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(6, 1fr)",
+    gap: "6px"
+  },
+  presetButton: {
+    backgroundColor: "#242229",
+    border: "1px solid #44414b",
     color: "#f5f3ef",
-    fontFamily: "inherit",
-    resize: "vertical",
-    minHeight: "75px",
-    outline: "none"
+    borderRadius: "6px",
+    padding: "6px 0",
+    fontSize: "0.8rem",
+    fontWeight: "700",
+    cursor: "pointer"
   },
   ratingErrorText: {
     color: "#ffb4b4",
@@ -667,16 +662,12 @@ function getPosterUrl(posterPath) {
 export function MovieRatingDialog({
   movie,
   userRating,
-  initialReview = "",
   onSave,
   onClear,
   onClose
 }) {
   const inputId = useId();
-  const [ratingInput, setRatingInput] = useState(
-    userRating != null ? String(userRating) : "8.0"
-  );
-  const [reviewText, setReviewText] = useState(initialReview || "");
+  const [ratingInput, setRatingInput] = useState(userRating || "8.0");
   const [ratingError, setRatingError] = useState("");
 
   async function handleSave(event) {
@@ -738,7 +729,7 @@ export function MovieRatingDialog({
           </button>
         </div>
         <p style={movieStyles.ratingModalSubtitle}>
-          Select your rating from 0.0 to 10.0 and share your thoughts:
+          Enter a decimal rating from 0.0 to 10.0 (e.g. 7.3 or 8.8):
         </p>
 
         <form onSubmit={handleSave}>
@@ -1225,8 +1216,7 @@ export function MovieDetailsDialog({
 
                 <div style={movieStyles.modalMetaRow}>
                   <div style={movieStyles.modalRatingBox}>
-                    <Award size={18} color="#f4c96b" />
-                    <span style={{ fontSize: "0.78rem", color: "#aaa7b2", fontWeight: 700, marginRight: "2px" }}>TMDB</span>
+                    <Star size={18} fill="#f4c96b" color="#f4c96b" />
                     <span style={movieStyles.modalRatingScore}>
                       {movie.vote_average != null
                         ? Number(movie.vote_average).toFixed(1)
@@ -1270,7 +1260,7 @@ export function MovieDetailsDialog({
                         fill={isInWatchlist ? "currentColor" : "none"}
                       />
                       <span>
-                        {isInWatchlist ? "Remove from Saved" : "Add to Saved"}
+                        {isInWatchlist ? "Remove from Watchlist" : "Add to Watchlist"}
                       </span>
                     </button>
                     <button
@@ -1696,9 +1686,10 @@ export default function MovieCard({
           </div>
         )}
       </div>
-      {ratingDialogOpen && (
-        <MovieRatingDialog
+      {reviewComposerOpen && (
+        <ReviewComposerDialog
           movie={movie}
+          productionCompany={productionCompany.name}
           userRating={userRating}
           onSaveRating={onSaveRating}
           onClearRating={onClearRating}

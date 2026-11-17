@@ -125,7 +125,7 @@ export default function ReviewCard({ review, userRating, onEdit, onDelete }) {
 
   function handleDelete() {
     const confirmed = window.confirm(
-      `Remove your rating for "${movie.title || "this movie"}"? This cannot be undone.`
+      `Delete your review of "${movie.title || "this movie"}"? This cannot be undone.`
     );
     if (confirmed) onDelete(review.movie_id);
   }
@@ -167,10 +167,7 @@ export default function ReviewCard({ review, userRating, onEdit, onDelete }) {
                 )}
               </div>
               <div style={styles.timestamps}>
-                <span>
-                  {review.review_text ? "Reviewed" : "Rated"}{" "}
-                  {formatTimestamp(review.created_at || review.updated_at)}
-                </span>
+                <span>Reviewed {formatTimestamp(review.created_at)}</span>
                 {wasEdited && (
                   <span>Updated {formatTimestamp(review.updated_at)}</span>
                 )}
@@ -197,9 +194,7 @@ export default function ReviewCard({ review, userRating, onEdit, onDelete }) {
           </div>
         </div>
       </div>
-      {review.review_text ? (
-        <div style={styles.review}>{review.review_text}</div>
-      ) : null}
+      <div style={styles.review}>{review.review_text}</div>
     </article>
   );
 }

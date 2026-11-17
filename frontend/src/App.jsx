@@ -28,16 +28,12 @@ export default function App() {
           }
         />
         <Route
-          path="/saved"
+          path="/watchlist"
           element={
             <ProtectedRoute>
               <Watchlist />
             </ProtectedRoute>
           }
-        />
-        <Route
-          path="/watchlist"
-          element={<Navigate to="/saved" replace />}
         />
         <Route
           path="/watched"
@@ -48,16 +44,12 @@ export default function App() {
           }
         />
         <Route
-          path="/rated"
+          path="/reviews"
           element={
             <ProtectedRoute>
               <Reviews />
             </ProtectedRoute>
           }
-        />
-        <Route
-          path="/reviews"
-          element={<Navigate to="/rated" replace />}
         />
 
         <Route

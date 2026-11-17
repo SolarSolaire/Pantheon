@@ -151,14 +151,14 @@ export default function Watchlist() {
         }}
         actions={[
           { label: "Home", onClick: () => navigate("/home") },
-          { label: "Rated", onClick: () => navigate("/rated") },
+          { label: "Reviews", onClick: () => navigate("/reviews") },
           { label: "Account", onClick: () => navigate("/profile") },
           { label: "Logout", onClick: handleLogout }
         ]}
       />
 
       <main style={watchlistStyles.container}>
-        <h1 style={watchlistStyles.title}>Saved Movies</h1>
+        <h1 style={watchlistStyles.title}>My Watchlist</h1>
         {error && (
           <div
             style={{
@@ -181,15 +181,15 @@ export default function Watchlist() {
         )}
 
         {!error && watchlistLoading && (
-          <div style={watchlistStyles.statusMessage}>Loading saved movies...</div>
+          <div style={watchlistStyles.statusMessage}>Loading watchlist...</div>
         )}
 
         {!error && !watchlistLoading && movies.length === 0 && (
           <div style={watchlistStyles.emptyState}>
             <Bookmark size={44} color="#f4c96b" />
-            <h2 style={watchlistStyles.emptyTitle}>Your saved list is empty</h2>
+            <h2 style={watchlistStyles.emptyTitle}>Your watchlist is empty</h2>
             <p style={watchlistStyles.emptySubtitle}>
-              Save movies from Home or Search and they will appear here.
+              Add movies from Home or Search and they will appear here.
             </p>
             <button
               type="button"
