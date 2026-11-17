@@ -72,6 +72,7 @@ export default function Watchlist() {
   const {
     userTitles,
     reviewedMovieIds,
+    markMovieReviewed,
     watchlistError: error,
     watchlistLoading,
     handleToggleWatchlist,
@@ -206,6 +207,7 @@ export default function Watchlist() {
             userRatings={userRatings}
             userTitles={userTitles}
             reviewedMovieIds={reviewedMovieIds}
+            onReviewSaved={markMovieReviewed}
             onToggleWatched={handleToggleWatched}
             onSaveRating={handleSaveRating}
             onClearRating={handleClearRating}

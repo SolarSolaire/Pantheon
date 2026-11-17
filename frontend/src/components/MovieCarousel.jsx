@@ -6,6 +6,7 @@ import styles from "../styles.jsx";
 export default function MovieCarousel({
   label,
   movies,
+  reviewPanelOpen,
   userRatings,
   userTitles,
   reviewedMovieIds,
@@ -13,7 +14,8 @@ export default function MovieCarousel({
   onToggleWatchlist,
   onToggleWatched,
   onSaveRating,
-  onClearRating
+  onClearRating,
+  onReviewSaved
 }) {
 
   const carouselRef = useRef(null);
@@ -24,12 +26,16 @@ export default function MovieCarousel({
     left: false,
     right: false
   });
+  const [leftFadeOpacity, setLeftFadeOpacity] = useState(0);
+  const [reviewPanelCoversArrow, setReviewPanelCoversArrow] = useState(false);
 
   useLayoutEffect(() => {
     const carousel = carouselRef.current;
     const firstCard = carousel?.firstElementChild;
     if (!carousel || !firstCard) return undefined;
 
+    const frame = carousel.parentElement;
+    const reviewPanel = document.querySelector(".recent-reviews");
     let resizeFrame = null;
     let previousInset = edgeInset;
 
@@ -37,16 +43,41 @@ export default function MovieCarousel({
       const left = carousel.scrollLeft > 1;
       const right =
         carousel.scrollLeft < carousel.scrollWidth - carousel.clientWidth - 1;
+      const fadeOpacity = Math.min(1, carousel.scrollLeft / 48);
       if (
         (pendingEndArrowRef.current === "left" && !left) ||
         (pendingEndArrowRef.current === "right" && !right)
       ) {
         pendingEndArrowRef.current = null;
       }
+      setLeftFadeOpacity(fadeOpacity);
       setScrollEdges((previous) =>
         previous.left === left && previous.right === right
           ? previous
           : { left, right }
+      );
+    }
+
+    function updateReviewPanelCoverage() {
+      if (!reviewPanelOpen || !frame || !reviewPanel) {
+        setReviewPanelCoversArrow(false);
+        return;
+      }
+
+      const panelBounds = reviewPanel.getBoundingClientRect();
+      const frameBounds = frame.getBoundingClientRect();
+      const arrowTop = frameBounds.top + frameBounds.height * 0.38;
+      const arrowBottom = arrowTop + 54;
+      const arrowLeft = frameBounds.right - 52;
+      const arrowRight = frameBounds.right - 10;
+      const covered =
+        panelBounds.top < arrowBottom &&
+        panelBounds.bottom > arrowTop &&
+        panelBounds.left < arrowRight &&
+        panelBounds.right > arrowLeft;
+
+      setReviewPanelCoversArrow((previous) =>
+        previous === covered ? previous : covered
       );
     }
 
@@ -66,6 +97,7 @@ export default function MovieCarousel({
       const nextInset = Math.round(gap + peekWidth);
       if (nextInset !== previousInset) {
         const cards = Array.from(carousel.children);
+        const wasAtBeginning = carousel.scrollLeft <= 1;
         const currentTarget = carousel.scrollLeft + previousInset;
         const anchorIndex = cards.reduce(
           (closestIndex, card, index) =>
@@ -79,19 +111,24 @@ export default function MovieCarousel({
         setEdgeInset(nextInset);
         cancelAnimationFrame(resizeFrame);
         resizeFrame = requestAnimationFrame(() => {
-          carousel.scrollLeft = Math.max(
-            0,
-            cards[anchorIndex].offsetLeft - nextInset
-          );
+          carousel.scrollLeft =
+            wasAtBeginning && anchorIndex === 0
+              ? 0
+              : Math.max(0, cards[anchorIndex].offsetLeft - nextInset);
           updateScrollEdges();
         });
       }
       updateScrollEdges();
+      updateReviewPanelCoverage();
     }
 
     updateEdgeInset();
-    const resizeObserver = new ResizeObserver(updateEdgeInset);
+    const resizeObserver = new ResizeObserver(() => {
+      updateEdgeInset();
+    });
     resizeObserver.observe(carousel);
+    if (frame) resizeObserver.observe(frame);
+    if (reviewPanel) resizeObserver.observe(reviewPanel);
     window.addEventListener("resize", updateEdgeInset);
     carousel.addEventListener("scroll", updateScrollEdges, { passive: true });
     return () => {
@@ -100,7 +137,7 @@ export default function MovieCarousel({
       carousel.removeEventListener("scroll", updateScrollEdges);
       cancelAnimationFrame(resizeFrame);
     };
-  }, [movies.length]);
+  }, [movies.length, reviewPanelOpen]);
 
   function scrollByCard(direction) {
     const carousel = carouselRef.current;
@@ -186,6 +223,7 @@ export default function MovieCarousel({
 
   return (
     <div
+      className="home-movie-carousel-frame"
       style={styles.home.carouselFrame}
       onMouseMove={handlePointerMove}
       onMouseLeave={() => setNearbyArrow(null)}
@@ -201,11 +239,24 @@ export default function MovieCarousel({
         onToggleWatched={onToggleWatched}
         onSaveRating={onSaveRating}
         onClearRating={onClearRating}
+        onReviewSaved={onReviewSaved}
         gridStyle={{
           ...styles.home.carousel,
           padding: "12px",
+          paddingLeft: "calc(12px + var(--home-horizontal-gutter))",
           scrollPadding: `8px ${edgeInset}px`
         }}
+      />
+      <div
+        aria-hidden="true"
+        className="home-movie-carousel-edge-shade is-left"
+        style={{ opacity: leftFadeOpacity }}
+      />
+      <div
+        aria-hidden="true"
+        className={`home-movie-carousel-edge-shade is-right${
+          scrollEdges.right ? " is-visible" : ""
+        }`}
       />
       <>
         {nearbyArrow === "left" && scrollEdges.left && (
@@ -218,16 +269,26 @@ export default function MovieCarousel({
             <ChevronLeft size={24} />
           </button>
         )}
-        {nearbyArrow === "right" && scrollEdges.right && (
-          <button
-            type="button"
-            aria-label={`Next ${label.toLowerCase()} movie`}
-            onClick={() => scrollByCard(1)}
-            style={{ ...styles.home.carouselArrow, ...styles.home.carouselArrowRight }}
-          >
-            <ChevronRight size={24} />
-          </button>
-        )}
+        {(nearbyArrow === "right" || reviewPanelCoversArrow) &&
+          scrollEdges.right && (
+            <button
+              type="button"
+              aria-label={`Next ${label.toLowerCase()} movie`}
+              onClick={() => scrollByCard(1)}
+              style={{
+                ...styles.home.carouselArrow,
+                ...styles.home.carouselArrowRight,
+                ...(reviewPanelCoversArrow
+                  ? {
+                      right: "calc(var(--recent-reviews-width) + 10px)",
+                      zIndex: 11
+                    }
+                  : {})
+              }}
+            >
+              <ChevronRight size={24} />
+            </button>
+          )}
       </>
     </div>
   );

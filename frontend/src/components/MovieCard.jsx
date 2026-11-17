@@ -19,8 +19,6 @@ import "./MovieCard.css";
 const IMAGE_URL = "https://image.tmdb.org/t/p/w500";
 const FALLBACK_IMAGE =
   "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=500&auto=format&fit=crop&q=60";
-const WATCHED_BUTTON_BACKGROUND =
-  "linear-gradient(#242229, #242229) padding-box, linear-gradient(135deg, #10b981, #315c4d, #10b981) border-box";
 
 const movieStyles = {
   movieCard: {
@@ -79,15 +77,6 @@ const movieStyles = {
     width: "calc(100% - 24px)",
     overflow: "hidden"
   },
-  posterControlRow: {
-    display: "grid",
-    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    alignItems: "center",
-    justifyItems: "center",
-    gap: "6px",
-    width: "100%",
-    marginTop: "8px"
-  },
   posterControl: {
     display: "flex",
     alignItems: "center",
@@ -99,8 +88,18 @@ const movieStyles = {
     padding: "0 4px",
     border: "1px solid #4a4651",
     borderRadius: "8px",
-    backgroundColor: "rgba(25, 24, 30, 0.92)",
-    color: "#f5f3ef"
+    backgroundColor: "transparent",
+    color: "#f5f3ef",
+    cursor: "pointer"
+  },
+  posterControlRow: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    alignItems: "center",
+    justifyItems: "center",
+    gap: "6px",
+    width: "100%",
+    marginTop: "8px"
   },
   posterTitle: {
     color: "#f5f3ef",
@@ -130,7 +129,8 @@ const movieStyles = {
   },
   posterMetadata: {
     position: "absolute",
-    top: "12px",
+    top: "auto",
+    bottom: "12px",
     left: "12px",
     display: "flex",
     flexDirection: "column",
@@ -145,22 +145,11 @@ const movieStyles = {
     lineHeight: "1.2",
     overflowWrap: "anywhere"
   },
-  ratingBadge: {
-    boxSizing: "border-box",
-    color: "#f4c96b",
-    fontSize: "0.76rem",
-    fontWeight: "800",
-    whiteSpace: "nowrap"
-  },
   userRatingButton: {
     cursor: "pointer",
     fontSize: "0.76rem",
     fontWeight: "800",
     whiteSpace: "nowrap"
-  },
-  reviewButton: {
-    color: "#aaa7b2",
-    cursor: "pointer"
   },
   removeButton: {
     position: "absolute",
@@ -199,8 +188,9 @@ const movieStyles = {
     borderColor: "#44414b"
   },
   actionButtonActive: {
-    background: WATCHED_BUTTON_BACKGROUND,
-    border: "2px solid transparent",
+    backgroundColor: "rgba(25, 24, 30, 0.55)",
+    border: "1px solid #10b981",
+    boxShadow: "0 0 8px rgba(16, 185, 129, 0.65)",
     color: "#10b981"
   },
   actionButtonPrimary: {
@@ -208,61 +198,43 @@ const movieStyles = {
     color: "#f5f3ef",
     borderColor: "transparent"
   },
-  posterIconButton: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "4px",
-    width: "34px",
-    height: "34px",
-    padding: 0,
-    border: "none",
-    borderRadius: "50%",
-    backgroundColor: "transparent",
-    color: "#f5f3ef",
-    cursor: "pointer",
-    filter: "drop-shadow(0 1px 3px rgba(0, 0, 0, 0.9))"
-  },
-  watchlistButton: {
+  tmdbRatingIndicator: {
     position: "absolute",
-    top: 0,
-    right: 0,
-    zIndex: 2,
-    width: "42px",
-    height: "42px",
-    borderLeft: "1px solid #2b2931",
-    borderBottom: "1px solid #2b2931",
-    borderRadius: "0 0 0 10px",
-    backgroundColor: "rgba(25, 24, 30, 0.88)",
-    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.7)"
-  },
-  watchedIndicator: {
-    position: "absolute",
-    top: 0,
-    left: 0,
+    top: "8px",
+    left: "8px",
     zIndex: 2,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    width: "42px",
-    height: "42px",
-    borderRight: "1px solid #2b2931",
-    borderBottom: "1px solid #2b2931",
-    borderRadius: "0 0 10px 0",
-    backgroundColor: "rgba(25, 24, 30, 0.88)",
-    color: "#10b981",
-    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.7)",
-    pointerEvents: "none",
-    transition: "opacity 0.2s ease"
+    gap: "3px",
+    minHeight: "24px",
+    padding: "0 6px",
+    border: "1px solid rgba(199, 195, 206, 0.2)",
+    borderRadius: "6px",
+    backgroundColor: "rgba(25, 24, 30, 0.56)",
+    color: "#c7c3ce",
+    fontSize: "0.68rem",
+    fontWeight: 700,
+    pointerEvents: "none"
   },
-  watchedButton: {
+  userRatingIndicator: {
     position: "absolute",
-    left: "12px",
-    right: "12px",
-    bottom: "12px",
-    width: "calc(100% - 24px)",
-    boxSizing: "border-box",
-    cursor: "pointer"
+    top: "8px",
+    right: "8px",
+    zIndex: 2,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "3px",
+    minHeight: "24px",
+    padding: "0 6px",
+    border: "1px solid #3b82f6",
+    borderRadius: "6px",
+    backgroundColor: "rgba(25, 24, 30, 0.56)",
+    color: "#60a5fa",
+    fontSize: "0.68rem",
+    fontWeight: 700,
+    pointerEvents: "none"
   },
   removedOverlay: {
     position: "absolute",
@@ -618,6 +590,22 @@ const movieStyles = {
     fontSize: "0.82rem",
     margin: "0 0 12px 0"
   },
+  reviewPromptButton: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "6px",
+    width: "100%",
+    minHeight: "34px",
+    padding: "6px 8px",
+    border: "1px solid #4a4651",
+    borderRadius: "8px",
+    backgroundColor: "transparent",
+    color: "#f4c96b",
+    font: "inherit",
+    fontWeight: 700,
+    cursor: "pointer"
+  },
   ratingModalActions: {
     display: "flex",
     gap: "10px",
@@ -674,7 +662,6 @@ function getPosterUrl(posterPath) {
 export function MovieRatingDialog({
   movie,
   userRating,
-  hasReview = false,
   onSave,
   onClear,
   onClose
@@ -683,7 +670,7 @@ export function MovieRatingDialog({
   const [ratingInput, setRatingInput] = useState(userRating || "8.0");
   const [ratingError, setRatingError] = useState("");
 
-  function handleSave(event) {
+  async function handleSave(event) {
     event.preventDefault();
     const rating = parseFloat(ratingInput);
     if (Number.isNaN(rating) || rating < 0 || rating > 10) {
@@ -692,7 +679,11 @@ export function MovieRatingDialog({
     }
 
     try {
-      onSave(movie, rating.toFixed(1));
+      const saved = await onSave(movie, rating.toFixed(1));
+      if (saved === false) {
+        setRatingError("Could not save your rating or mark the movie as watched.");
+        return;
+      }
       onClose();
     } catch (error) {
       setRatingError(error.message || "Could not save your rating.");
@@ -858,13 +849,17 @@ export function MovieRatingDropdown({
   onSave,
   onClear,
   isOpen,
-  onOpenChange
+  onOpenChange,
+  onWriteReview,
+  onButtonInteractionChange,
+  buttonStyle
 }) {
   const buttonRef = useRef(null);
   const popoverRef = useRef(null);
   const closeTimerRef = useRef(null);
   const [isClosing, setIsClosing] = useState(false);
   const [rating, setRating] = useState(Number(userRating) || 0);
+  const [hasRated, setHasRated] = useState(false);
   const [position, setPosition] = useState({ left: 0, top: 0, width: 0 });
   const [error, setError] = useState("");
 
@@ -960,6 +955,11 @@ export function MovieRatingDropdown({
     }
 
     updatePosition();
+    const resizeObserver =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(updatePosition);
+    if (popoverRef.current) resizeObserver?.observe(popoverRef.current);
     document.addEventListener("pointermove", handlePointerMove);
     document.addEventListener("pointerdown", handlePointerDown);
     document.addEventListener("keydown", handleKeyDown);
@@ -971,6 +971,7 @@ export function MovieRatingDropdown({
       document.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
+      resizeObserver?.disconnect();
     };
   }, [isOpen]);
 
@@ -983,6 +984,7 @@ export function MovieRatingDropdown({
     try {
       onClear(movie);
       setRating(0);
+      setHasRated(false);
       setError("");
     } catch (clearError) {
       setError(clearError.message || "Could not clear your rating.");
@@ -995,6 +997,10 @@ export function MovieRatingDropdown({
         className="movie-card-button"
         ref={buttonRef}
         type="button"
+        onMouseEnter={() => onButtonInteractionChange?.(true)}
+        onMouseLeave={() => onButtonInteractionChange?.(false)}
+        onFocus={() => onButtonInteractionChange?.(true)}
+        onBlur={() => onButtonInteractionChange?.(false)}
         aria-label={
           userRating
             ? `Change your rating, currently ${userRating} out of 10`
@@ -1010,20 +1016,16 @@ export function MovieRatingDropdown({
           setError("");
           onOpenChange(!isOpen);
         }}
-        style={{
-          ...movieStyles.posterControl,
-          ...movieStyles.userRatingButton,
-          color: userRating ? "#19181e" : "#f4c96b",
-          backgroundColor: userRating ? "#f4c96b" : "rgba(25, 24, 30, 0.92)",
-          borderColor: userRating ? "#f4c96b" : "#4a4651"
-        }}
+        style={buttonStyle}
       >
         <Star
           size={14}
           fill={userRating ? "currentColor" : "none"}
           color="currentColor"
         />
-        {userRating && <span>{userRating}</span>}
+        {userRating && (
+          <span style={{ color: "#60a5fa" }}>{userRating}</span>
+        )}
       </button>
       {isOpen &&
         createPortal(
@@ -1059,7 +1061,7 @@ export function MovieRatingDropdown({
                     aria-label={`Rate ${starRating} out of 10`}
                     aria-pressed={starRating === Math.round(rating)}
                     title={`${starRating} / 10`}
-                    onClick={() => {
+                    onClick={async () => {
                       if (userRating && starRating === Math.round(Number(userRating))) {
                         clearRating();
                         return;
@@ -1067,7 +1069,8 @@ export function MovieRatingDropdown({
 
                       setRating(starRating);
                       try {
-                        onSave(movie, starRating.toFixed(1));
+                        await onSave(movie, starRating.toFixed(1));
+                        setHasRated(true);
                         setError("");
                       } catch (saveError) {
                         setError(saveError.message || "Could not save your rating.");
@@ -1119,6 +1122,28 @@ export function MovieRatingDropdown({
               </div>
             </div>
             {error && <p style={movieStyles.ratingErrorText}>{error}</p>}
+            {onWriteReview && (
+              <div
+                className={`movie-card-review-prompt${
+                  hasRated ? " is-visible" : ""
+                }`}
+              >
+                <button
+                  className="movie-card-button"
+                  type="button"
+                  onClick={() => {
+                    clearTimeout(closeTimerRef.current);
+                    closeTimerRef.current = null;
+                    onOpenChange(false);
+                    onWriteReview();
+                  }}
+                  style={movieStyles.reviewPromptButton}
+                >
+                  <MessageSquareText size={14} />
+                  <span>Write Review?</span>
+                </button>
+              </div>
+            )}
           </div>,
           document.body
         )}
@@ -1139,6 +1164,18 @@ export function MovieDetailsDialog({
 }) {
   const [ratingDialogOpen, setRatingDialogOpen] = useState(false);
   const posterUrl = getPosterUrl(movie.poster_path);
+
+  async function saveRatingAndMarkWatched(ratingMovie, rating) {
+    const saved = await onSaveRating(ratingMovie, rating);
+    if (saved === false) return false;
+    if (isWatched || !onToggleWatched) return true;
+
+    const watched = await onToggleWatched(ratingMovie);
+    if (watched === false) {
+      throw new Error("Rating saved, but could not mark the movie as watched.");
+    }
+    return true;
+  }
 
   return (
     <>
@@ -1212,7 +1249,8 @@ export function MovieDetailsDialog({
                           ? {
                               backgroundColor: "rgba(244, 201, 107, 0.16)",
                               borderColor: "#f4c96b",
-                              color: "#f4c96b"
+                              color: "#f4c96b",
+                              boxShadow: "0 0 8px rgba(244, 201, 107, 0.4)"
                             }
                           : {})
                       }}
@@ -1274,7 +1312,7 @@ export function MovieDetailsDialog({
         <MovieRatingDialog
           movie={movie}
           userRating={userRating}
-          onSave={onSaveRating}
+          onSave={saveRatingAndMarkWatched}
           onClear={onClearRating}
           onClose={() => setRatingDialogOpen(false)}
         />
@@ -1289,31 +1327,46 @@ export default function MovieCard({
   hasReview = false,
   isInWatchlist = false,
   isWatched = false,
-  showWatchedIndicator = true,
   onSelect,
   onToggleWatchlist,
   onToggleWatched,
   onSaveRating,
   onClearRating,
+  onReviewSaved,
   onRemove,
   isRemoved = false,
   onUndoRemoval
 }) {
   const navigate = useNavigate();
   const [cardHovered, setCardHovered] = useState(false);
-  const [trackingButtonHovered, setTrackingButtonHovered] = useState(false);
-  const [ratingPopoverOpen, setRatingPopoverOpen] = useState(false);
   const [reviewComposerOpen, setReviewComposerOpen] = useState(false);
-  const [reviewSaved, setReviewSaved] = useState(false);
   const [productionCompany, setProductionCompany] = useState({
     status: "idle",
     name: null
   });
   const isMountedRef = useRef(true);
-  const cardActive = cardHovered && !trackingButtonHovered;
-  const reviewIsWritten = hasReview || reviewSaved;
+  const cardActive = cardHovered;
   const posterUrl = getPosterUrl(movie.poster_path);
   const canReview = isAuthenticated();
+  const hasUserRating =
+    userRating !== undefined && userRating !== null && userRating !== "";
+  const hasUserContent = hasUserRating || hasReview;
+  const posterGlowColors = [
+    ...(isWatched ? ["rgba(16, 185, 129, 0.85)"] : []),
+    ...(hasUserContent ? ["rgba(59, 130, 246, 0.85)"] : []),
+    ...(isInWatchlist ? ["rgba(244, 201, 107, 0.85)"] : [])
+  ];
+
+  async function markMovieWatched(movieToMark) {
+    if (isWatched || !onToggleWatched) return true;
+    return onToggleWatched(movieToMark);
+  }
+
+  async function saveMovieReview(reviewMovie, reviewText) {
+    const savedReview = await saveUserReview(reviewMovie, reviewText);
+    onReviewSaved?.(reviewMovie.id);
+    return savedReview;
+  }
 
   function handleMovieSelect() {
     const movieId = movie.id ?? movie.tmdb_id ?? movie.movie_id;
@@ -1355,9 +1408,11 @@ export default function MovieCard({
         handleMovieSelect();
       }}
     >
-      <div
-        style={movieStyles.movieCardSurface}
-      >
+      <div className="movie-card-wrap">
+        <div
+          className="movie-card-surface"
+          style={movieStyles.movieCardSurface}
+        >
         <div
           style={{
             ...movieStyles.posterContainer,
@@ -1401,7 +1456,12 @@ export default function MovieCard({
               pointerEvents: cardActive ? "auto" : "none"
             }}
           >
-            <div style={movieStyles.posterMetadata}>
+            <div
+              style={{
+                ...movieStyles.posterMetadata,
+                ...(onRemove ? { bottom: "60px" } : {})
+              }}
+            >
               <span style={movieStyles.posterMetadataText}>
                 {movie.release_date || "Release date unknown"}
               </span>
@@ -1416,7 +1476,7 @@ export default function MovieCard({
             <div
               style={{
                 ...movieStyles.posterHoverContent,
-                ...(onRemove && onToggleWatched ? { bottom: "104px" } : {})
+                bottom: onRemove ? "104px" : "58px"
               }}
             >
               <div style={movieStyles.posterTitleGroup}>
@@ -1426,34 +1486,6 @@ export default function MovieCard({
                 </span>
               </div>
             </div>
-            {onToggleWatched && (
-              <button
-                className="movie-card-button"
-                type="button"
-                aria-label={isWatched ? "Mark as unwatched" : "Mark as watched"}
-                aria-pressed={isWatched}
-                title={isWatched ? "Mark as unwatched" : "Mark as watched"}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onToggleWatched(movie);
-                }}
-                style={{
-                  ...movieStyles.posterControl,
-                  ...movieStyles.watchedButton,
-                  ...(onRemove ? { bottom: "60px" } : {}),
-                  background: isWatched
-                    ? WATCHED_BUTTON_BACKGROUND
-                    : "#242229",
-                  border: isWatched
-                    ? "2px solid transparent"
-                    : "1px solid #44414b",
-                  color: isWatched ? "#10b981" : "#f0edf4"
-                }}
-              >
-                {isWatched ? <Eye size={16} /> : <EyeOff size={16} />}
-                <span>{isWatched ? "Mark as Unwatched" : "Mark as Watched"}</span>
-              </button>
-            )}
             {onRemove && (
               <button
                 className="movie-card-button"
@@ -1473,46 +1505,38 @@ export default function MovieCard({
               </button>
             )}
           </div>
-          {onToggleWatchlist && (
-            <button
-              className="movie-card-button"
-              type="button"
-              onMouseEnter={() => setTrackingButtonHovered(true)}
-              onMouseLeave={() => setTrackingButtonHovered(false)}
-              aria-label={
-                isInWatchlist ? "Remove from watchlist" : "Add to watchlist"
-              }
-              aria-pressed={isInWatchlist}
-              title={
-                isInWatchlist ? "Remove from watchlist" : "Add to watchlist"
-              }
-              onClick={(event) => {
-                event.stopPropagation();
-                onToggleWatchlist(movie);
-              }}
-              style={{
-                ...movieStyles.posterIconButton,
-                ...movieStyles.watchlistButton,
-                backgroundColor: isInWatchlist
-                  ? "rgba(244, 201, 107, 0.42)"
-                  : "rgba(25, 24, 30, 0.55)",
-                borderColor: isInWatchlist ? "#f4c96b" : "#393740",
-                color: "#f4c96b"
-              }}
-            >
-              <Bookmark size={22} fill={isInWatchlist ? "currentColor" : "none"} />
-            </button>
-          )}
-          {isWatched && showWatchedIndicator && (
+          <div
+            role="img"
+            aria-label={`TMDB rating ${
+              movie.vote_average != null
+                ? `${Number(movie.vote_average).toFixed(1)} out of 10`
+                : "not available"
+            }`}
+            title={`TMDB rating ${
+              movie.vote_average != null
+                ? `${Number(movie.vote_average).toFixed(1)} / 10`
+                : "N/A"
+            }`}
+            style={movieStyles.tmdbRatingIndicator}
+          >
+            <Star size={10} fill="currentColor" aria-hidden="true" />
+            <span>
+              {movie.vote_average != null
+                ? Number(movie.vote_average).toFixed(1)
+                : "N/A"}
+            </span>
+          </div>
+          {hasUserRating && (
             <div
               role="img"
-              aria-label="Watched"
+              aria-label={`Your rating: ${userRating} out of 10`}
+              title={`Your rating: ${userRating} / 10`}
               style={{
-                ...movieStyles.watchedIndicator,
-                opacity: cardActive ? 0 : 1
+                ...movieStyles.userRatingIndicator
               }}
             >
-              <Eye size={22} aria-hidden="true" />
+              <Star size={14} fill="currentColor" aria-hidden="true" />
+              <span style={{ color: "#60a5fa" }}>{userRating}</span>
             </div>
           )}
           {movie.genre && (
@@ -1534,74 +1558,133 @@ export default function MovieCard({
               </button>
             </div>
           )}
+          {posterGlowColors.length > 0 && (
+            <div
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                right: 0,
+                bottom: 0,
+                left: 0,
+                zIndex: 4,
+                display: "flex",
+                height: "2px",
+                pointerEvents: "none"
+              }}
+            >
+              {posterGlowColors.map((glowColor) => (
+                <span
+                  key={glowColor}
+                  style={{
+                    flex: 1,
+                    height: "100%",
+                    backgroundColor: glowColor,
+                    boxShadow: `0 -2px 12px 3px ${glowColor}`
+                  }}
+                />
+              ))}
+            </div>
+          )}
         </div>
-      </div>
-
-      <div
-        style={movieStyles.posterControlRow}
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div
-          style={{
-            ...movieStyles.posterControl,
-            ...movieStyles.ratingBadge
-          }}
-          aria-label={`TMDB rating ${
-            movie.vote_average != null
-              ? Number(movie.vote_average).toFixed(1)
-              : "not available"
-          }`}
-        >
-          <Star size={13} fill="#f4c96b" color="#f4c96b" />
-          <span>
-            {movie.vote_average != null
-              ? Number(movie.vote_average).toFixed(1)
-              : "N/A"}
-          </span>
         </div>
-        {onSaveRating ? (
-          <MovieRatingDropdown
-            movie={movie}
-            userRating={userRating}
-            onSave={onSaveRating}
-            onClear={onClearRating}
-            isOpen={ratingPopoverOpen}
-            onOpenChange={setRatingPopoverOpen}
-          />
-        ) : (
-          <span />
-        )}
-        <button
-          className="movie-card-button"
-          type="button"
-          disabled={!canReview}
-          aria-label={
-            canReview
-              ? `${reviewIsWritten ? "Edit" : "Write"} your review for ${movie.title}`
-              : "Sign in to write a review"
-          }
-          title={
-            canReview
-              ? `${reviewIsWritten ? "Edit" : "Write"} your review`
-              : "Sign in to write a review"
-          }
-          onClick={() => setReviewComposerOpen(true)}
-          style={{
-            ...movieStyles.posterControl,
-            ...movieStyles.reviewButton,
-            ...(reviewIsWritten
-              ? {
-                  backgroundColor: "rgba(16, 185, 129, 0.14)",
-                  borderColor: "#10b981",
+        {(onToggleWatched || onSaveRating || onToggleWatchlist) && (
+          <div
+            className="movie-card-control-row"
+            style={movieStyles.posterControlRow}
+            onClick={(event) => event.stopPropagation()}
+          >
+            {onToggleWatched ? (
+              <button
+                className="movie-card-button"
+                type="button"
+                aria-label={isWatched ? "Mark as unwatched" : "Mark as watched"}
+                aria-pressed={isWatched}
+                title={isWatched ? "Mark as unwatched" : "Mark as watched"}
+                onClick={() => onToggleWatched(movie)}
+                style={{
+                  ...movieStyles.posterControl,
+                  backgroundColor: "rgba(25, 24, 30, 0.55)",
+                  border: `1px solid ${isWatched ? "#10b981" : "#4a4651"}`,
+                  boxShadow: isWatched
+                    ? "0 0 8px rgba(16, 185, 129, 0.65)"
+                    : "none",
                   color: "#10b981"
+                }}
+              >
+                <Eye size={16} />
+              </button>
+            ) : (
+              <span />
+            )}
+            {onSaveRating ? (
+              <button
+                className="movie-card-button"
+                type="button"
+                aria-label={
+                  hasUserRating
+                    ? `Change your rating for ${movie.title}`
+                    : `Rate ${movie.title}`
                 }
-              : {}),
-            cursor: canReview ? "pointer" : "not-allowed",
-            opacity: canReview ? 1 : 0.55
-          }}
-        >
-          <MessageSquareText size={15} />
-        </button>
+                title={
+                  hasUserRating
+                    ? `Your rating: ${userRating} / 10`
+                    : "Rate this movie"
+                }
+                onClick={() => setReviewComposerOpen(true)}
+                style={{
+                  ...movieStyles.posterControl,
+                  ...movieStyles.userRatingButton,
+                  color: "#60a5fa",
+                  backgroundColor: "transparent",
+                  borderColor: "#3b82f6",
+                  boxShadow: "0 0 8px rgba(59, 130, 246, 0.65)"
+                }}
+              >
+                <Star
+                  size={14}
+                  fill={hasUserRating ? "currentColor" : "none"}
+                />
+                {hasUserRating && (
+                  <span style={{ color: "#60a5fa" }}>{userRating}</span>
+                )}
+              </button>
+            ) : (
+              <span />
+            )}
+            {onToggleWatchlist ? (
+              <button
+                className="movie-card-button"
+                type="button"
+                aria-label={
+                  isInWatchlist ? "Remove from watchlist" : "Add to watchlist"
+                }
+                aria-pressed={isInWatchlist}
+                title={
+                  isInWatchlist ? "Remove from watchlist" : "Add to watchlist"
+                }
+                onClick={() => onToggleWatchlist(movie)}
+                style={{
+                  ...movieStyles.posterControl,
+                  backgroundColor: isInWatchlist
+                    ? "rgba(244, 201, 107, 0.16)"
+                    : "transparent",
+                  borderColor: isInWatchlist ? "#f4c96b" : "#4a4651",
+                  color: "#f4c96b",
+                  boxShadow: isInWatchlist
+                    ? "0 0 0 1px rgba(244, 201, 107, 0.65), 0 0 8px rgba(244, 201, 107, 0.45)"
+                    : "none"
+                }}
+              >
+                <Bookmark
+                  size={16}
+                  fill={isInWatchlist ? "currentColor" : "none"}
+                />
+              </button>
+            ) : (
+              <span />
+            )}
+          </div>
+        )}
       </div>
       {reviewComposerOpen && (
         <ReviewComposerDialog
@@ -1609,8 +1692,10 @@ export default function MovieCard({
           productionCompany={productionCompany.name}
           userRating={userRating}
           onSaveRating={onSaveRating}
-          onSave={saveUserReview}
-          onSaved={() => setReviewSaved(true)}
+          onClearRating={onClearRating}
+          onMarkWatched={markMovieWatched}
+          onSave={saveMovieReview}
+          canWriteReview={canReview}
           onClose={() => setReviewComposerOpen(false)}
         />
       )}

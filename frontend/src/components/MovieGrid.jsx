@@ -9,12 +9,12 @@ export default function MovieGrid({
   userRatings = {},
   userTitles = [],
   reviewedMovieIds = EMPTY_REVIEWED_MOVIE_IDS,
-  showWatchedIndicator = true,
   onSelect,
   onToggleWatchlist,
   onToggleWatched,
   onSaveRating,
   onClearRating,
+  onReviewSaved,
   onRemove,
   removedMovieIds = [],
   onUndoRemoval,
@@ -32,15 +32,15 @@ export default function MovieGrid({
             key={movie.id}
             movie={movie}
             userRating={userRatings[movie.id]}
+            hasReview={reviewedMovieIds.has(String(movie.id))}
             isInWatchlist={Boolean(userTitle?.in_watchlist)}
             isWatched={Boolean(userTitle?.watched)}
-            hasReview={reviewedMovieIds.has(String(movie.id))}
-            showWatchedIndicator={showWatchedIndicator}
             onSelect={onSelect}
             onToggleWatchlist={onToggleWatchlist}
             onToggleWatched={onToggleWatched}
             onSaveRating={onSaveRating}
             onClearRating={onClearRating}
+            onReviewSaved={onReviewSaved}
             onRemove={onRemove}
             isRemoved={removedMovieIds.includes(String(movie.id))}
             onUndoRemoval={onUndoRemoval}

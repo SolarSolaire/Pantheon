@@ -100,6 +100,20 @@ async function createCurrentSchema(client) {
     END
     $$
   `);
+  await client.query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'user_feedback_review_rating_check'
+      ) THEN
+        ALTER TABLE user_feedback
+        ADD CONSTRAINT user_feedback_review_rating_check
+        CHECK (review_text IS NULL OR rating IS NOT NULL) NOT VALID;
+      END IF;
+    END
+    $$
+  `);
 }
 
 async function initializeDatabase() {

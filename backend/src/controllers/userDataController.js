@@ -23,11 +23,11 @@ function getMovieData(value, movieId) {
   };
 }
 
-async function upsertTitle(movieData) {
+async function upsertTitle(movieData, client = db) {
   const releaseDate = /^\d{4}-\d{2}-\d{2}$/.test(movieData.release_date)
     ? movieData.release_date
     : null;
-  const result = await db.query(
+  const result = await client.query(
     `INSERT INTO titles (
        tmdb_id, name, media_type, overview, release_date, poster_path,
        production_company, updated_at
@@ -150,25 +150,32 @@ exports.clearRating = (req, res) => {
   if (!movieId) return res.status(400).json({ message: 'A valid movie ID is required.' });
 
   return handleDatabaseError(res, 'Could not clear user rating.', async () => {
-    await db.query(
+    const result = await db.query(
       `DELETE FROM user_feedback
        USING titles
        WHERE user_feedback.title_id = titles.title_id
          AND user_feedback.user_id = $1
          AND titles.tmdb_id = $2
-         AND user_feedback.review_text IS NULL`,
+         AND user_feedback.review_text IS NULL
+       RETURNING user_feedback.feedback_id`,
       [req.user.user_id, movieId]
     );
-    await db.query(
-      `UPDATE user_feedback
-       SET rating = NULL, updated_at = CURRENT_TIMESTAMP
-       FROM titles
-       WHERE user_feedback.title_id = titles.title_id
-         AND user_feedback.user_id = $1
-         AND titles.tmdb_id = $2
-         AND user_feedback.review_text IS NOT NULL`,
-      [req.user.user_id, movieId]
-    );
+    if (result.rowCount === 0) {
+      const existingReview = await db.query(
+        `SELECT 1
+         FROM user_feedback
+         JOIN titles USING (title_id)
+         WHERE user_feedback.user_id = $1
+           AND titles.tmdb_id = $2
+           AND user_feedback.review_text IS NOT NULL`,
+        [req.user.user_id, movieId]
+      );
+      if (existingReview.rowCount > 0) {
+        return res.status(409).json({
+          message: 'Delete your review before clearing its rating.'
+        });
+      }
+    }
     res.status(204).end();
   });
 };
@@ -363,6 +370,42 @@ exports.getReviews = (req, res) =>
     });
   });
 
+exports.getRecentReviews = (req, res) =>
+  handleDatabaseError(res, 'Could not load recent reviews.', async () => {
+    const result = await db.query(
+      `SELECT user_feedback.feedback_id AS review_id,
+              users.username,
+              titles.tmdb_id AS movie_id, user_feedback.review_text,
+              jsonb_build_object(
+                'id', titles.tmdb_id,
+                'title', titles.name,
+                'media_type', titles.media_type,
+                'overview', titles.overview,
+                'release_date', titles.release_date,
+                'poster_path', titles.poster_path,
+                'production_company', titles.production_company
+              ) AS movie_data,
+              user_feedback.review_created_at AS created_at,
+              user_feedback.rating AS user_rating
+       FROM user_feedback
+       JOIN users USING (user_id)
+       JOIN titles USING (title_id)
+       WHERE user_feedback.review_text IS NOT NULL
+       ORDER BY user_feedback.review_created_at DESC, user_feedback.feedback_id DESC
+       LIMIT 8`
+    );
+    res.json({
+      reviews: result.rows.map((review) => ({
+        ...review,
+        movie_data: review.movie_data || {
+          id: Number(review.movie_id),
+          title: 'Movie details unavailable'
+        },
+        user_rating: review.user_rating == null ? null : Number(review.user_rating)
+      }))
+    });
+  });
+
 exports.getReview = (req, res) => {
   const movieId = getMovieId(req.params.movieId);
   if (!movieId) return res.status(400).json({ message: 'A valid movie ID is required.' });
@@ -387,22 +430,49 @@ exports.saveReview = (req, res) => {
   }
 
   return handleDatabaseError(res, 'Could not save review.', async () => {
-    const titleId = await upsertTitle(movieData);
-    await db.query(
-      `INSERT INTO user_feedback (
-         user_id, title_id, review_text, review_created_at, review_updated_at
-       )
-       VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-       ON CONFLICT (user_id, title_id)
-       DO UPDATE SET review_text = EXCLUDED.review_text,
-                     review_created_at = COALESCE(
-                       user_feedback.review_created_at,
-                       CURRENT_TIMESTAMP
-                     ),
-                     review_updated_at = CURRENT_TIMESTAMP,
-                     updated_at = CURRENT_TIMESTAMP`,
-      [req.user.user_id, titleId, reviewText]
-    );
+    const client = await db.pool.connect();
+    let transactionStarted = false;
+    try {
+      await client.query('BEGIN');
+      transactionStarted = true;
+      const titleId = await upsertTitle(movieData, client);
+      const ratingResult = await client.query(
+        `SELECT rating
+         FROM user_feedback
+         WHERE user_id = $1 AND title_id = $2
+         FOR UPDATE`,
+        [req.user.user_id, titleId]
+      );
+      if (ratingResult.rows[0]?.rating == null) {
+        await client.query('ROLLBACK');
+        transactionStarted = false;
+        return res.status(400).json({
+          message: 'Rate this movie before submitting a review.'
+        });
+      }
+      await client.query(
+        `INSERT INTO user_feedback (
+           user_id, title_id, review_text, review_created_at, review_updated_at
+         )
+         VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+         ON CONFLICT (user_id, title_id)
+         DO UPDATE SET review_text = EXCLUDED.review_text,
+                       review_created_at = COALESCE(
+                         user_feedback.review_created_at,
+                         CURRENT_TIMESTAMP
+                       ),
+                       review_updated_at = CURRENT_TIMESTAMP,
+                       updated_at = CURRENT_TIMESTAMP`,
+        [req.user.user_id, titleId, reviewText]
+      );
+      await client.query('COMMIT');
+      transactionStarted = false;
+    } catch (error) {
+      if (transactionStarted) await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
     res.json({ review: await getReviewByMovie(req.user.user_id, movieId) });
   });
 };

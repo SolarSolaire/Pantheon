@@ -8,6 +8,7 @@ import {
   saveUserReview
 } from "../api/userData";
 import useUserRatings from "../hooks/useUserRatings";
+import useUserWatchlist from "../hooks/useUserWatchlist";
 import Navbar from "../components/Navbar";
 import ReviewCard from "../components/ReviewCard";
 import ReviewComposerDialog from "../components/ReviewComposerDialog";
@@ -68,6 +69,21 @@ export default function Reviews() {
   const [editingReview, setEditingReview] = useState(null);
   const { userRatings, ratingsError, handleSaveRating } =
     useUserRatings();
+  const {
+    userTitles,
+    watchlistError,
+    handleToggleWatched,
+    markMovieReviewed,
+    unmarkMovieReviewed
+  } = useUserWatchlist();
+
+  async function markMovieWatched(movie) {
+    const userTitle = userTitles.find(
+      (title) => String(title.id) === String(movie.id)
+    );
+    if (userTitle?.watched) return true;
+    return handleToggleWatched(movie);
+  }
 
   useEffect(() => {
     const controller = new AbortController();
@@ -86,6 +102,7 @@ export default function Reviews() {
 
   async function handleSave(movie, reviewText) {
     const savedReview = await saveUserReview(movie, reviewText);
+    markMovieReviewed(movie.id);
     setReviews((previous) => [
       savedReview,
       ...previous.filter((review) => String(review.movie_id) !== String(movie.id))
@@ -97,6 +114,7 @@ export default function Reviews() {
   async function handleDelete(movieId) {
     try {
       await deleteUserReview(movieId);
+      unmarkMovieReviewed(movieId);
       setReviews((previous) =>
         previous.filter((review) => String(review.movie_id) !== String(movieId))
       );
@@ -131,13 +149,16 @@ export default function Reviews() {
         {ratingsError && (
           <div style={{ ...styles.message, ...styles.error }}>{ratingsError}</div>
         )}
+        {watchlistError && (
+          <div style={{ ...styles.message, ...styles.error }}>{watchlistError}</div>
+        )}
         {loading && <div style={styles.message}>Loading your reviews...</div>}
         {!loading && !error && reviews.length === 0 && (
           <div style={styles.empty}>
             <MessageSquareText size={42} color="#f4c96b" />
             <h2 style={styles.emptyTitle}>You have not written any reviews yet</h2>
             <p style={styles.emptySubtitle}>
-              Open a movie card and choose the review button to get started.
+              Open a movie card and click its rating star to rate or write a review.
             </p>
           </div>
         )}
@@ -164,6 +185,7 @@ export default function Reviews() {
             userRatings[editingReview.movie_id] ?? editingReview.user_rating
           }
           onSaveRating={handleSaveRating}
+          onMarkWatched={markMovieWatched}
           onSave={handleSave}
           onClose={() => setEditingReview(null)}
         />

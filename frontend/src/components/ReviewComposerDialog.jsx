@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Star, X } from "lucide-react";
+import { RotateCcw, Star, X } from "lucide-react";
 import { fetchMovieProductionCompany } from "../api/tmdb";
 import { fetchUserReview } from "../api/userData";
 
@@ -73,6 +73,45 @@ const styles = {
     cursor: "pointer",
     transition: "transform 140ms ease, filter 140ms ease"
   },
+  clearRating: {
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+    margin: "0 0 12px auto",
+    padding: "4px 0",
+    border: "none",
+    backgroundColor: "transparent",
+    color: "#aaa7b2",
+    font: "inherit",
+    fontSize: "0.82rem",
+    cursor: "pointer"
+  },
+  reviewToggle: {
+    display: "block",
+    margin: "0 0 10px",
+    padding: "8px 12px",
+    border: "1px solid #4a4651",
+    borderRadius: "8px",
+    backgroundColor: "transparent",
+    color: "#f4c96b",
+    font: "inherit",
+    fontWeight: 700,
+    cursor: "pointer"
+  },
+  reviewField: {
+    maxHeight: 0,
+    overflow: "hidden",
+    opacity: 0,
+    visibility: "hidden",
+    transition:
+      "max-height 240ms ease, opacity 180ms ease, visibility 0s linear 240ms"
+  },
+  reviewFieldExpanded: {
+    maxHeight: "420px",
+    opacity: 1,
+    visibility: "visible",
+    transitionDelay: "0s"
+  },
   textarea: {
     width: "100%",
     minHeight: "160px",
@@ -120,8 +159,10 @@ export default function ReviewComposerDialog({
   initialReview,
   userRating,
   onSaveRating,
+  onClearRating,
+  onMarkWatched,
   onSave,
-  onSaved,
+  canWriteReview = true,
   onClose
 }) {
   const [reviewText, setReviewText] = useState(initialReview ?? "");
@@ -130,6 +171,7 @@ export default function ReviewComposerDialog({
   const [company, setCompany] = useState(productionCompany || "");
   const [rating, setRating] = useState(Math.round(Number(userRating) || 0));
   const [hoveredRating, setHoveredRating] = useState(0);
+  const [reviewExpanded, setReviewExpanded] = useState(initialReview !== undefined);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -141,7 +183,11 @@ export default function ReviewComposerDialog({
     const controller = new AbortController();
     if (initialReview === undefined) {
       fetchUserReview(movie.id, controller.signal)
-        .then((review) => setReviewText(review?.review_text || ""))
+        .then((review) => {
+          const text = review?.review_text || "";
+          setReviewText(text);
+          if (text) setReviewExpanded(true);
+        })
         .catch((loadError) => {
           if (!controller.signal.aborted) {
             setReviewLoadError(
@@ -174,6 +220,10 @@ export default function ReviewComposerDialog({
   async function handleSubmit(event) {
     event.preventDefault();
     const text = reviewText.trim();
+    if (rating < 1 || rating > 10) {
+      setError("Rate this movie before saving a review.");
+      return;
+    }
     if (!text || text.length > 5000) {
       setError("Enter a review between 1 and 5000 characters.");
       return;
@@ -182,7 +232,7 @@ export default function ReviewComposerDialog({
     setSaving(true);
     setError("");
     try {
-      const savedReview = await onSave(
+      await onSave(
         {
           id: movie.id,
           title: movie.title,
@@ -193,7 +243,13 @@ export default function ReviewComposerDialog({
         },
         text
       );
-      onSaved?.(savedReview);
+      const watched = await onMarkWatched?.(movie);
+      if (watched === false) {
+        setError(
+          "Review saved, but could not mark this movie as watched."
+        );
+        return;
+      }
       onClose();
     } catch (saveError) {
       setError(saveError.message || "Could not save your review.");
@@ -221,7 +277,7 @@ export default function ReviewComposerDialog({
         </button>
 
         <form onSubmit={handleSubmit}>
-          <h3 style={styles.sectionTitle}>Your review</h3>
+          <h3 style={styles.sectionTitle}>Rate this movie</h3>
           <div
             role="group"
             aria-label="Rate this movie"
@@ -242,9 +298,31 @@ export default function ReviewComposerDialog({
                   onMouseLeave={() => setHoveredRating(0)}
                   onFocus={() => setHoveredRating(starRating)}
                   onBlur={() => setHoveredRating(0)}
-                  onClick={() => {
+                  onClick={async () => {
+                    const previousRating = rating;
                     setRating(starRating);
-                    onSaveRating?.(movie, starRating.toFixed(1));
+                    try {
+                      const saved = await onSaveRating?.(
+                        movie,
+                        starRating.toFixed(1)
+                      );
+                      if (saved === false) {
+                        setRating(previousRating);
+                        setError("Could not save your rating.");
+                        return;
+                      }
+                      const watched = await onMarkWatched?.(movie);
+                      if (watched === false) {
+                        setError(
+                          "Rating saved, but could not mark this movie as watched."
+                        );
+                        return;
+                      }
+                      setError("");
+                    } catch (ratingError) {
+                      setRating(previousRating);
+                      setError(ratingError.message || "Could not save your rating.");
+                    }
                   }}
                   style={{
                     ...styles.ratingStarButton,
@@ -256,35 +334,92 @@ export default function ReviewComposerDialog({
               );
             })}
           </div>
-          <textarea
-            value={reviewText}
-            onChange={(event) => {
-              setReviewText(event.target.value);
-              setError("");
+          {onClearRating && rating > 0 && reviewLoaded && !reviewText.trim() && (
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  const cleared = await onClearRating(movie);
+                  if (cleared === false) {
+                    setError("Delete your review before clearing its rating.");
+                    return;
+                  }
+                  setRating(0);
+                  setError("");
+                } catch (ratingError) {
+                  setError(ratingError.message || "Could not clear your rating.");
+                }
+              }}
+              style={styles.clearRating}
+            >
+              <RotateCcw size={13} />
+              <span>Clear rating</span>
+            </button>
+          )}
+          {canWriteReview && (
+            <button
+              type="button"
+              aria-expanded={reviewExpanded}
+              onClick={() => setReviewExpanded((expanded) => !expanded)}
+              style={styles.reviewToggle}
+            >
+              {reviewExpanded
+                ? "Hide review"
+                : reviewText
+                  ? "Edit review"
+                  : "Write a review"}
+            </button>
+          )}
+          <div
+            style={{
+              ...styles.reviewField,
+              ...(reviewExpanded ? styles.reviewFieldExpanded : {})
             }}
-            maxLength={5000}
-            disabled={!reviewLoaded || saving}
-            placeholder="What did you think of this movie?"
-            aria-label="Your review"
-            style={styles.textarea}
-          />
+            aria-hidden={!reviewExpanded}
+          >
+            <textarea
+              value={reviewText}
+              onChange={(event) => {
+                setReviewText(event.target.value);
+                setError("");
+              }}
+              maxLength={5000}
+              disabled={!reviewExpanded || !reviewLoaded || saving}
+              placeholder="What did you think of this movie?"
+              aria-label="Your review"
+              style={styles.textarea}
+            />
+          </div>
           {!reviewLoaded && <p style={styles.metadata}>Loading your review...</p>}
           {reviewLoadError && <p style={styles.error}>{reviewLoadError}</p>}
+          {reviewExpanded && canWriteReview && rating < 1 && (
+            <p style={styles.metadata}>A rating is required to save a review.</p>
+          )}
           {error && <p style={styles.error}>{error}</p>}
-          <div style={styles.actions}>
-            <span style={styles.count}>{reviewText.length}/5000</span>
-            <button
-              type="submit"
-              style={{
-                ...styles.save,
-                opacity: !reviewLoaded || saving ? 0.6 : 1,
-                cursor: !reviewLoaded || saving ? "default" : "pointer"
-              }}
-              disabled={!reviewLoaded || saving}
-            >
-              {saving ? "Saving..." : "Save review"}
-            </button>
-          </div>
+          {reviewExpanded && canWriteReview && (
+            <div style={styles.actions}>
+              <span style={styles.count}>{reviewText.length}/5000</span>
+              <button
+                type="submit"
+                style={{
+                  ...styles.save,
+                  opacity:
+                    !reviewLoaded || saving || !reviewText.trim() || rating < 1
+                      ? 0.6
+                      : 1,
+                  cursor:
+                    !reviewLoaded || saving || !reviewText.trim() || rating < 1
+                      ? "default"
+                      : "pointer"
+                }}
+                disabled={
+                  !reviewLoaded || saving || !reviewText.trim() || rating < 1
+                }
+              >
+                {saving ? "Saving..." : "Save review"}
+              </button>
+            </div>
+          )}
         </form>
       </article>
     </div>,

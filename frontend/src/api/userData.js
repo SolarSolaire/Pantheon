@@ -146,6 +146,11 @@ export async function fetchUserReviews(signal) {
   return data.reviews;
 }
 
+export async function fetchRecentReviews(signal) {
+  const { data } = await api.get("/user-data/reviews/recent", { signal });
+  return data.reviews;
+}
+
 export async function fetchUserReview(movieId, signal) {
   const { data } = await api.get(
     `/user-data/reviews/${encodeURIComponent(movieId)}`,

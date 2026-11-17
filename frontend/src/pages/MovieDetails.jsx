@@ -358,6 +358,22 @@ export default function MovieDetails() {
     handleToggleWatched
   } = useUserWatchlist();
 
+  async function saveRatingAndMarkWatched(ratingMovie, rating) {
+    const saved = await handleSaveRating(ratingMovie, rating);
+    if (saved === false) return false;
+
+    const userTitle = userTitles.find(
+      (title) => String(title.id) === String(ratingMovie.id)
+    );
+    if (userTitle?.watched) return true;
+
+    const watched = await handleToggleWatched(ratingMovie);
+    if (watched === false) {
+      throw new Error("Rating saved, but could not mark the movie as watched.");
+    }
+    return true;
+  }
+
   useEffect(() => {
     const controller = new AbortController();
     setMovie(null);
@@ -497,7 +513,12 @@ export default function MovieDetails() {
                     style={{
                       ...pageStyles.actionButton,
                       ...(userTitle?.in_watchlist
-                        ? { borderColor: "#f4c96b", color: "#f4c96b" }
+                        ? {
+                            backgroundColor: "rgba(244, 201, 107, 0.14)",
+                            borderColor: "#f4c96b",
+                            color: "#f4c96b",
+                            boxShadow: "0 0 8px rgba(244, 201, 107, 0.4)"
+                          }
                         : {})
                     }}
                   >
@@ -519,7 +540,11 @@ export default function MovieDetails() {
                     style={{
                       ...pageStyles.actionButton,
                       ...(userTitle?.watched
-                        ? { borderColor: "#10b981", color: "#10b981" }
+                        ? {
+                            borderColor: "#10b981",
+                            color: "#10b981",
+                            boxShadow: "0 0 8px rgba(16, 185, 129, 0.65)"
+                          }
                         : {})
                     }}
                   >
@@ -607,7 +632,7 @@ export default function MovieDetails() {
         <MovieRatingDialog
           movie={movie}
           userRating={userRating}
-          onSave={handleSaveRating}
+          onSave={saveRatingAndMarkWatched}
           onClear={handleClearRating}
           onClose={() => setRatingDialogOpen(false)}
         />

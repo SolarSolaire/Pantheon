@@ -15,6 +15,7 @@ router.post('/watchlist', userDataController.addWatchlistMovie);
 router.put('/titles/:movieId/watched', userDataController.setUserTitleWatched);
 router.delete('/watchlist/:movieId', userDataController.removeWatchlistMovie);
 router.get('/reviews', userDataController.getReviews);
+router.get('/reviews/recent', userDataController.getRecentReviews);
 router.get('/reviews/:movieId', userDataController.getReview);
 router.put('/reviews/:movieId', userDataController.saveReview);
 router.delete('/reviews/:movieId', userDataController.deleteReview);

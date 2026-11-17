@@ -32,8 +32,10 @@ export default function useUserRatings() {
       await saveUserRating(movie.id, rating, movie);
       setUserRatings((previous) => ({ ...previous, [movie.id]: rating }));
       setRatingsError("");
+      return true;
     } catch (error) {
       setRatingsError(error.message || "Could not save your rating.");
+      return false;
     }
   }, []);
 
@@ -46,8 +48,10 @@ export default function useUserRatings() {
         return updated;
       });
       setRatingsError("");
+      return true;
     } catch (error) {
       setRatingsError(error.message || "Could not clear your rating.");
+      return false;
     }
   }, []);
   return { userRatings, ratingsError, handleSaveRating, handleClearRating };

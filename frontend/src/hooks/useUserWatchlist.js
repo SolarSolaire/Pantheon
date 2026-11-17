@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import {
   addMovieToUserWatchlist,
   ensureLegacyUserDataMigrated,
-  fetchUserTitles,
   fetchUserReviews,
+  fetchUserTitles,
   removeMovieFromUserWatchlist,
   setUserTitleWatched
 } from "../api/userData";
@@ -16,7 +16,20 @@ export default function useUserWatchlist() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetchUserReviews(controller.signal)
+    const migration = ensureLegacyUserDataMigrated();
+    migration
+      .then(() => fetchUserTitles(controller.signal))
+      .then(setUserTitles)
+      .catch((error) => {
+        if (!controller.signal.aborted) {
+          setWatchlistError(error.message || "Could not load your watchlist.");
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setWatchlistLoading(false);
+      });
+    migration
+      .then(() => fetchUserReviews(controller.signal))
       .then((reviews) => {
         if (!controller.signal.aborted) {
           setReviewedMovieIds(
@@ -28,18 +41,6 @@ export default function useUserWatchlist() {
         if (!controller.signal.aborted) {
           console.error("Could not load reviewed movie statuses:", error);
         }
-      });
-
-    ensureLegacyUserDataMigrated()
-      .then(() => fetchUserTitles(controller.signal))
-      .then(setUserTitles)
-      .catch((error) => {
-        if (!controller.signal.aborted) {
-          setWatchlistError(error.message || "Could not load your watchlist.");
-        }
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setWatchlistLoading(false);
       });
 
     return () => controller.abort();
@@ -76,9 +77,26 @@ export default function useUserWatchlist() {
     }
   }, [userTitles]);
 
+  const markMovieReviewed = useCallback((movieId) => {
+    setReviewedMovieIds((previous) => {
+      const updated = new Set(previous);
+      updated.add(String(movieId));
+      return updated;
+    });
+  }, []);
+  const unmarkMovieReviewed = useCallback((movieId) => {
+    setReviewedMovieIds((previous) => {
+      const updated = new Set(previous);
+      updated.delete(String(movieId));
+      return updated;
+    });
+  }, []);
+
   return {
     userTitles,
     reviewedMovieIds,
+    markMovieReviewed,
+    unmarkMovieReviewed,
     watchlistError,
     watchlistLoading,
     handleToggleWatchlist,

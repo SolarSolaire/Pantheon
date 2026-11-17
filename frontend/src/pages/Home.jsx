@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { isAuthenticated } from "../utils/auth";
-import { logoutUser } from "../api/userData";
+import { fetchRecentReviews, logoutUser } from "../api/userData";
 import useUserRatings from "../hooks/useUserRatings";
 import useUserWatchlist from "../hooks/useUserWatchlist";
 import MovieCarousel from "../components/MovieCarousel";
 import Navbar from "../components/Navbar";
+import RecentReviews from "../components/RecentReviews";
 import {
   fetchNowPlayingMovies,
   fetchTrendingMovies,
@@ -13,6 +14,7 @@ import {
   searchMovies
 } from "../api/tmdb";
 import styles from "../styles.jsx";
+import "./Home.css";
 
 const HOME_SECTIONS = [
   { key: "trending", title: "Trending", fetchMovies: fetchTrendingMovies },
@@ -41,6 +43,7 @@ export default function Home() {
   const {
     userTitles,
     reviewedMovieIds,
+    markMovieReviewed,
     watchlistError,
     handleToggleWatchlist,
     handleToggleWatched
@@ -50,6 +53,10 @@ export default function Home() {
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const [suggestionsError, setSuggestionsError] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [recentReviews, setRecentReviews] = useState([]);
+  const [recentReviewsLoading, setRecentReviewsLoading] = useState(true);
+  const [recentReviewsError, setRecentReviewsError] = useState("");
+  const [recentReviewsHidden, setRecentReviewsHidden] = useState(false);
 
   useEffect(() => {
     const redirectIfSignedOut = () => {
@@ -103,6 +110,25 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    const controller = new AbortController();
+    fetchRecentReviews(controller.signal)
+      .then(setRecentReviews)
+      .catch((error) => {
+        if (!controller.signal.aborted) {
+          setRecentReviewsError(
+            error.response?.data?.message ||
+              error.message ||
+              "Could not load recent reviews."
+          );
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setRecentReviewsLoading(false);
+      });
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
     const query = search.trim();
     if (!query) {
       setSuggestions([]);
@@ -151,6 +177,8 @@ export default function Home() {
     navigate(`/movies/${movie.id}`);
   }
 
+  const recentReviewsCollapsed = recentReviewsHidden;
+
   return (
     <div>
       <Navbar
@@ -180,7 +208,14 @@ export default function Home() {
         ]}
       />
 
-      <main style={styles.shared.container}>
+      <main
+        style={{
+          ...styles.shared.container,
+          maxWidth: "none",
+          margin: 0,
+          paddingRight: 0
+        }}
+      >
         {watchlistError && (
           <div style={{ ...styles.home.statusMessage, ...styles.home.errorMessage }}>
             {watchlistError}
@@ -192,40 +227,68 @@ export default function Home() {
           </div>
         )}
 
-        {HOME_SECTIONS.map(({ key, title }) => {
-          const section = movieSections[key];
-          return (
-            <section key={key} style={styles.home.movieSection}>
-              <h2 style={styles.home.sectionTitle}>{title}</h2>
-              {section.loading && (
-                <div style={styles.home.statusMessage}>
-                  Loading {title.toLowerCase()} movies...
-                </div>
-              )}
-              {!section.loading && section.error && (
-                <div style={{ ...styles.home.statusMessage, ...styles.home.errorMessage }}>
-                  {section.error}
-                </div>
-              )}
-              {!section.loading && !section.error && section.movies.length > 0 && (
-                <MovieCarousel
-                  label={title}
-                  movies={section.movies}
-                  userRatings={userRatings}
-                  userTitles={userTitles}
-                  reviewedMovieIds={reviewedMovieIds}
-                  onToggleWatchlist={handleToggleWatchlist}
-                  onToggleWatched={handleToggleWatched}
-                  onSaveRating={handleSaveRating}
-                  onClearRating={handleClearRating}
-                />
-              )}
-              {!section.loading && !section.error && section.movies.length === 0 && (
-                <div style={styles.home.statusMessage}>No movies available.</div>
-              )}
-            </section>
-          );
-        })}
+        <div
+          className={`home-content-layout${
+            recentReviewsCollapsed ? " is-review-panel-collapsed" : ""
+          }`}
+        >
+          <div className="home-movie-sections">
+            {HOME_SECTIONS.map(({ key, title }) => {
+              const section = movieSections[key];
+              return (
+                <section key={key} style={styles.home.movieSection}>
+                  <h2 style={styles.home.sectionTitle}>{title}</h2>
+                  {section.loading && (
+                    <div style={styles.home.statusMessage}>
+                      Loading {title.toLowerCase()} movies...
+                    </div>
+                  )}
+                  {!section.loading && section.error && (
+                    <div
+                      style={{
+                        ...styles.home.statusMessage,
+                        ...styles.home.errorMessage
+                      }}
+                    >
+                      {section.error}
+                    </div>
+                  )}
+                  {!section.loading &&
+                    !section.error &&
+                    section.movies.length > 0 && (
+                      <MovieCarousel
+                        label={title}
+                        movies={section.movies}
+                        reviewPanelOpen={!recentReviewsHidden}
+                        userRatings={userRatings}
+                        userTitles={userTitles}
+                        reviewedMovieIds={reviewedMovieIds}
+                        onReviewSaved={markMovieReviewed}
+                        onToggleWatchlist={handleToggleWatchlist}
+                        onToggleWatched={handleToggleWatched}
+                        onSaveRating={handleSaveRating}
+                        onClearRating={handleClearRating}
+                      />
+                    )}
+                  {!section.loading &&
+                    !section.error &&
+                    section.movies.length === 0 && (
+                      <div style={styles.home.statusMessage}>
+                        No movies available.
+                      </div>
+                    )}
+                </section>
+              );
+            })}
+          </div>
+          <RecentReviews
+            reviews={recentReviews}
+            loading={recentReviewsLoading}
+            error={recentReviewsError}
+            collapsed={recentReviewsCollapsed}
+            onToggle={() => setRecentReviewsHidden(!recentReviewsCollapsed)}
+          />
+        </div>
       </main>
 
     </div>
