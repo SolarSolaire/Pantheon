@@ -19,5 +19,6 @@ router.get('/reviews/recent', userDataController.getRecentReviews);
 router.get('/reviews/:movieId', userDataController.getReview);
 router.put('/reviews/:movieId', userDataController.saveReview);
 router.delete('/reviews/:movieId', userDataController.deleteReview);
+router.get('/movies/:movieId/all-reviews', userDataController.getAllMovieReviews);
 
 module.exports = router;

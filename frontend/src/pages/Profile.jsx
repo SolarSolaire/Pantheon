@@ -162,14 +162,14 @@ export default function Profile() {
     }
   }
 
-  async function handleLogout() {
-    try {
-      await logoutUser();
-      navigate("/login", { replace: true });
-    } catch (logoutError) {
-      setError(logoutError.message || "Could not revoke your session.");
-    }
+  async function handleAuthAction() {
+  try {
+    await logoutUser();
+  } catch (error) {
+    console.error("Could not revoke user session:", error);
   }
+  navigate("/login", { replace: true });
+}
 
   return (
     <div>
@@ -178,7 +178,8 @@ export default function Profile() {
           { label: "Home", onClick: () => navigate("/home") },
           { label: "Watchlist", onClick: () => navigate("/watchlist") },
           { label: "Reviews", onClick: () => navigate("/reviews") },
-          { label: "Logout", onClick: handleLogout }
+          { label: "Account", onClick: () => navigate("/profile") },
+          { label: "Logout", onClick: handleAuthAction }
         ]}
       />
       <main style={styles.container}>

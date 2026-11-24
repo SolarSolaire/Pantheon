@@ -27,6 +27,7 @@ function getLegacyStorageKeys() {
   }
 }
 
+
 function readLegacyJson(storageKey, description) {
   const storedValue = localStorage.getItem(storageKey);
   if (!storedValue) return null;
@@ -195,3 +196,8 @@ export async function logoutUser() {
     localStorage.removeItem("pantheon_token");
   }
 }
+
+export const fetchMovieReviews = async (movieId, signal) => {
+  const response = await api.get(`/user-data/movies/${movieId}/all-reviews`, { signal });
+  return response.data.reviews;
+};

@@ -224,7 +224,9 @@ export default function Search() {
       <Navbar
         showSearch={false}
         actions={[
+          { label: "Home", onClick: () => navigate("/home") },
           { label: "Watchlist", onClick: () => navigate("/watchlist") },
+          { label: "Reviews", onClick: () => navigate("/reviews") },
           { label: "Account", onClick: () => navigate("/profile") },
           { label: "Logout", onClick: handleAuthAction }
         ]}

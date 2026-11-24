@@ -335,6 +335,28 @@ async function getReviewByMovie(userId, movieId) {
   };
 }
 
+exports.getAllMovieReviews = (req, res) => {
+  const movieId = getMovieId(req.params.movieId);
+  if (!movieId) return res.status(400).json({ message: 'A valid movie ID is required.' });
+
+  return handleDatabaseError(res, 'Could not load movie reviews.', async () => {
+    const result = await db.query(
+      `SELECT user_feedback.feedback_id AS review_id,
+              users.username,
+              user_feedback.review_text,
+              user_feedback.review_created_at AS created_at,
+              user_feedback.rating AS user_rating
+       FROM user_feedback
+       JOIN users USING (user_id)
+       JOIN titles USING (title_id)
+       WHERE titles.tmdb_id = $1 AND user_feedback.review_text IS NOT NULL
+       ORDER BY user_feedback.review_created_at DESC`,
+      [movieId]
+    );
+    res.json({ reviews: result.rows });
+  });
+};
+
 exports.getReviews = (req, res) =>
   handleDatabaseError(res, 'Could not load reviews.', async () => {
     const result = await db.query(
@@ -451,18 +473,12 @@ exports.saveReview = (req, res) => {
         });
       }
       await client.query(
-        `INSERT INTO user_feedback (
-           user_id, title_id, review_text, review_created_at, review_updated_at
-         )
-         VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-         ON CONFLICT (user_id, title_id)
-         DO UPDATE SET review_text = EXCLUDED.review_text,
-                       review_created_at = COALESCE(
-                         user_feedback.review_created_at,
-                         CURRENT_TIMESTAMP
-                       ),
-                       review_updated_at = CURRENT_TIMESTAMP,
-                       updated_at = CURRENT_TIMESTAMP`,
+        `UPDATE user_feedback 
+         SET review_text = $3,
+             review_created_at = COALESCE(review_created_at, CURRENT_TIMESTAMP),
+             review_updated_at = CURRENT_TIMESTAMP,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE user_id = $1 AND title_id = $2`,
         [req.user.user_id, titleId, reviewText]
       );
       await client.query('COMMIT');

@@ -124,14 +124,14 @@ export default function Reviews() {
     }
   }
 
-  async function handleLogout() {
-    try {
-      await logoutUser();
-    } catch (logoutError) {
-      console.error("Could not revoke user session:", logoutError);
-    }
-    navigate("/login", { replace: true });
+  async function handleAuthAction() {
+  try {
+    await logoutUser();
+  } catch (error) {
+    console.error("Could not revoke user session:", error);
   }
+  navigate("/login", { replace: true });
+}
 
   return (
     <div>
@@ -139,8 +139,9 @@ export default function Reviews() {
         actions={[
           { label: "Home", onClick: () => navigate("/home") },
           { label: "Watchlist", onClick: () => navigate("/watchlist") },
+          { label: "Reviews", onClick: () => navigate("/reviews") },
           { label: "Account", onClick: () => navigate("/profile") },
-          { label: "Logout", onClick: handleLogout }
+          { label: "Logout", onClick: handleAuthAction }
         ]}
       />
       <main style={styles.container}>

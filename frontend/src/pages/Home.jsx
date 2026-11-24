@@ -56,7 +56,7 @@ export default function Home() {
   const [recentReviews, setRecentReviews] = useState([]);
   const [recentReviewsLoading, setRecentReviewsLoading] = useState(true);
   const [recentReviewsError, setRecentReviewsError] = useState("");
-  const [recentReviewsHidden, setRecentReviewsHidden] = useState(false);
+  const [recentReviewsHidden, setRecentReviewsHidden] = useState(true);
 
   useEffect(() => {
     const redirectIfSignedOut = () => {
@@ -201,6 +201,7 @@ export default function Home() {
           onClear: () => setDropdownOpen(false)
         }}
         actions={[
+          { label: "Home", onClick: () => navigate("/home") },
           { label: "Watchlist", onClick: () => navigate("/watchlist") },
           { label: "Reviews", onClick: () => navigate("/reviews") },
           { label: "Account", onClick: () => navigate("/profile") },

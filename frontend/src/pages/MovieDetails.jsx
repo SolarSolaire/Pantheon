@@ -5,10 +5,12 @@ import {
   Bookmark,
   Eye,
   EyeOff,
+  MessageSquareText,
   Star,
-  UserRound
+  UserRound,
 } from "lucide-react";
 import { fetchMovieDetails } from "../api/tmdb";
+import { fetchMovieReviews } from "../api/userData";
 import useUserRatings from "../hooks/useUserRatings";
 import useUserWatchlist from "../hooks/useUserWatchlist";
 import { MovieRatingDialog } from "../components/MovieCard";
@@ -22,7 +24,7 @@ const pageStyles = {
     maxWidth: "1400px",
     margin: "0 auto",
     padding: "32px clamp(20px, 5vw, 72px) 72px",
-    color: "#f5f3ef"
+    color: "#f5f3ef",
   },
   backButton: {
     display: "inline-flex",
@@ -35,7 +37,7 @@ const pageStyles = {
     backgroundColor: "#242229",
     color: "#f0edf4",
     font: "inherit",
-    cursor: "pointer"
+    cursor: "pointer",
   },
   message: {
     padding: "18px",
@@ -43,25 +45,25 @@ const pageStyles = {
     borderRadius: "10px",
     backgroundColor: "#19181e",
     color: "#aaa7b2",
-    textAlign: "center"
+    textAlign: "center",
   },
   error: {
     borderColor: "#6a3338",
     backgroundColor: "#2e1a1c",
-    color: "#ffb4b4"
+    color: "#ffb4b4",
   },
   hero: {
     display: "flex",
     flexWrap: "wrap",
     alignItems: "flex-start",
     gap: "32px",
-    marginBottom: "40px"
+    marginBottom: "40px",
   },
   posterColumn: {
     flex: "0 1 280px",
     width: "100%",
     maxWidth: "280px",
-    minWidth: 0
+    minWidth: 0,
   },
   poster: {
     display: "block",
@@ -71,7 +73,7 @@ const pageStyles = {
     border: "1px solid #2b2931",
     borderRadius: "12px",
     backgroundColor: "#25232b",
-    boxShadow: "0 16px 36px rgba(0, 0, 0, 0.35)"
+    boxShadow: "0 16px 36px rgba(0, 0, 0, 0.35)",
   },
   posterPlaceholder: {
     display: "grid",
@@ -81,24 +83,24 @@ const pageStyles = {
     border: "1px solid #2b2931",
     borderRadius: "12px",
     backgroundColor: "#25232b",
-    color: "#85818d"
+    color: "#85818d",
   },
   details: {
     flex: "1 1 380px",
     minWidth: 0,
-    paddingTop: "8px"
+    paddingTop: "8px",
   },
   title: {
     margin: "0 0 10px",
     fontSize: "clamp(1.8rem, 4vw, 2.8rem)",
     lineHeight: 1.12,
-    overflowWrap: "anywhere"
+    overflowWrap: "anywhere",
   },
   metadata: {
     display: "flex",
     flexDirection: "column",
     gap: "5px",
-    margin: "0 0 18px"
+    margin: "0 0 18px",
   },
   metadataLabel: {
     display: "block",
@@ -107,26 +109,26 @@ const pageStyles = {
     fontSize: "0.76rem",
     fontWeight: 700,
     textTransform: "uppercase",
-    letterSpacing: "0.06em"
+    letterSpacing: "0.06em",
   },
   metadataValue: {
     color: "#f0edf4",
     fontSize: "0.92rem",
-    lineHeight: 1.45
+    lineHeight: 1.45,
   },
   runtime: {
     marginBottom: "18px",
     color: "#d0cdd5",
-    fontSize: "0.98rem"
+    fontSize: "0.98rem",
   },
   genreSection: {
-    marginBottom: "20px"
+    marginBottom: "20px",
   },
   genreList: {
     display: "flex",
     flexWrap: "wrap",
     gap: "8px",
-    marginTop: "8px"
+    marginTop: "8px",
   },
   genreChip: {
     padding: "6px 10px",
@@ -134,20 +136,20 @@ const pageStyles = {
     borderRadius: "999px",
     backgroundColor: "#242229",
     color: "#f4c96b",
-    fontSize: "0.85rem"
+    fontSize: "0.85rem",
   },
   overview: {
     margin: "0 0 20px",
     color: "#d0cdd5",
     fontSize: "0.98rem",
     lineHeight: 1.7,
-    whiteSpace: "pre-line"
+    whiteSpace: "pre-line",
   },
   actions: {
     display: "flex",
     flexWrap: "wrap",
     gap: "10px",
-    marginTop: "24px"
+    marginTop: "24px",
   },
   actionButton: {
     display: "inline-flex",
@@ -162,14 +164,14 @@ const pageStyles = {
     color: "#f0edf4",
     font: "inherit",
     fontWeight: 700,
-    cursor: "pointer"
+    cursor: "pointer",
   },
   section: {
-    marginTop: "36px"
+    marginTop: "36px",
   },
   sectionTitle: {
     margin: "0 0 16px",
-    fontSize: "1.45rem"
+    fontSize: "1.45rem",
   },
   category: {
     marginTop: "16px",
@@ -179,17 +181,17 @@ const pageStyles = {
     color: "#f4c96b",
     fontSize: "1.05rem",
     fontWeight: 700,
-    cursor: "pointer"
+    cursor: "pointer",
   },
   peopleGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fill, minmax(112px, 1fr))",
     gap: "18px 14px",
-    padding: "0 0 16px"
+    padding: "0 0 16px",
   },
   personCard: {
     minWidth: 0,
-    textAlign: "center"
+    textAlign: "center",
   },
   portrait: {
     display: "block",
@@ -201,7 +203,7 @@ const pageStyles = {
     borderRadius: "8px",
     backgroundColor: "#25232b",
     objectFit: "cover",
-    objectPosition: "center top"
+    objectPosition: "center top",
   },
   portraitPlaceholder: {
     display: "grid",
@@ -213,7 +215,7 @@ const pageStyles = {
     border: "1px solid #393740",
     borderRadius: "8px",
     backgroundColor: "#25232b",
-    color: "#85818d"
+    color: "#85818d",
   },
   personName: {
     margin: 0,
@@ -221,7 +223,7 @@ const pageStyles = {
     fontSize: "0.88rem",
     fontWeight: 700,
     lineHeight: 1.35,
-    overflowWrap: "anywhere"
+    overflowWrap: "anywhere",
   },
   personRole: {
     display: "block",
@@ -229,12 +231,63 @@ const pageStyles = {
     color: "#aaa7b2",
     fontSize: "0.76rem",
     lineHeight: 1.35,
-    overflowWrap: "anywhere"
+    overflowWrap: "anywhere",
   },
   emptyText: {
     margin: 0,
-    color: "#aaa7b2"
-  }
+    color: "#aaa7b2",
+  },
+  reviewsList: {
+    display: "grid",
+    gap: "16px",
+  },
+  reviewCard: {
+    padding: "16px",
+    border: "1px solid #2b2931",
+    borderRadius: "10px",
+    backgroundColor: "#19181e",
+  },
+  reviewHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: "10px",
+  },
+  reviewUser: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    color: "#f0edf4",
+    fontSize: "0.95rem",
+    fontWeight: 700,
+  },
+  reviewRating: {
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+    color: "#f4c96b",
+    fontSize: "0.9rem",
+    fontWeight: 700,
+  },
+  reviewDate: {
+    color: "#aaa7b2",
+    fontSize: "0.8rem",
+  },
+  reviewText: {
+    margin: 0,
+    color: "#d0cdd5",
+    fontSize: "0.95rem",
+    lineHeight: 1.6,
+    whiteSpace: "pre-line",
+    overflowWrap: "anywhere",
+  },
+  emptyReviews: {
+    padding: "40px 20px",
+    border: "1px solid #2b2931",
+    borderRadius: "10px",
+    backgroundColor: "#19181e",
+    textAlign: "center",
+  },
 };
 
 function formatReleaseDate(releaseDate) {
@@ -245,7 +298,7 @@ function formatReleaseDate(releaseDate) {
     : parsedDate.toLocaleDateString("en-US", {
         year: "numeric",
         month: "long",
-        day: "numeric"
+        day: "numeric",
       });
 }
 
@@ -264,9 +317,10 @@ function getCrewCategories(crew) {
     if (!groups.has(category)) groups.set(category, new Map());
 
     const people = groups.get(category);
-    const id = credit.id == null
-      ? `${credit.name}:${credit.job || ""}`
-      : String(credit.id);
+    const id =
+      credit.id == null
+        ? `${credit.name}:${credit.job || ""}`
+        : String(credit.id);
     const existing = people.get(id);
     if (existing) {
       if (credit.job && !existing.jobs.includes(credit.job)) {
@@ -275,31 +329,27 @@ function getCrewCategories(crew) {
     } else {
       people.set(id, {
         ...credit,
-        jobs: credit.job ? [credit.job] : []
+        jobs: credit.job ? [credit.job] : [],
       });
     }
   });
 
   return Array.from(groups, ([category, people]) => ({
     category,
-    people: Array.from(people.values())
+    people: Array.from(people.values()),
   })).sort((first, second) => first.category.localeCompare(second.category));
 }
 
 function getCrewPeople(crew, predicate) {
   return getCrewCategories(crew.filter(predicate)).flatMap(
-    ({ people }) => people
+    ({ people }) => people,
   );
 }
 
-function StaffCategory({
-  title,
-  people,
-  isCast = false,
-  defaultOpen = false
-}) {
+function StaffCategory({ title, people, isCast = false, defaultOpen = false }) {
   const peopleWithPortraitsFirst = [...people].sort(
-    (first, second) => Number(!first.profile_path) - Number(!second.profile_path)
+    (first, second) =>
+      Number(!first.profile_path) - Number(!second.profile_path),
   );
 
   return (
@@ -341,12 +391,24 @@ function StaffCategory({
   );
 }
 
+async function handleAuthAction() {
+  try {
+    await logoutUser();
+  } catch (error) {
+    console.error("Could not revoke user session:", error);
+  }
+  navigate("/login", { replace: true });
+}
+
 export default function MovieDetails() {
   const navigate = useNavigate();
   const { movieId } = useParams();
   const [movie, setMovie] = useState(null);
+  const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [reviewsError, setReviewsError] = useState("");
   const [ratingDialogOpen, setRatingDialogOpen] = useState(false);
   const { userRatings, ratingsError, handleSaveRating, handleClearRating } =
     useUserRatings();
@@ -355,7 +417,7 @@ export default function MovieDetails() {
     watchlistError,
     watchlistLoading,
     handleToggleWatchlist,
-    handleToggleWatched
+    handleToggleWatched,
   } = useUserWatchlist();
 
   async function saveRatingAndMarkWatched(ratingMovie, rating) {
@@ -363,7 +425,7 @@ export default function MovieDetails() {
     if (saved === false) return false;
 
     const userTitle = userTitles.find(
-      (title) => String(title.id) === String(ratingMovie.id)
+      (title) => String(title.id) === String(ratingMovie.id),
     );
     if (userTitle?.watched) return true;
 
@@ -387,7 +449,7 @@ export default function MovieDetails() {
           setError(
             fetchError.response?.data?.message ||
               fetchError.message ||
-              "Could not load movie details."
+              "Could not load movie details.",
           );
         }
       })
@@ -398,19 +460,43 @@ export default function MovieDetails() {
     return () => controller.abort();
   }, [movieId]);
 
+  // Fetches reviews from the backend
+  useEffect(() => {
+    const controller = new AbortController();
+    setReviews([]);
+    setReviewsLoading(true);
+    setReviewsError("");
+
+    fetchMovieReviews(movieId, controller.signal)
+      .then((data) => setReviews(data || []))
+      .catch((err) => {
+        if (!controller.signal.aborted) {
+          setReviewsError(
+            err.response?.data?.message ||
+              err.message ||
+              "Could not load reviews.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setReviewsLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [movieId]);
+
   const crew = movie?.credits?.crew || [];
   const directors = useMemo(
     () => getCrewPeople(crew, (credit) => credit.job === "Director"),
-    [crew]
+    [crew],
   );
   const writers = useMemo(
     () =>
       getCrewPeople(
         crew,
-        (credit) =>
-          credit.department === "Writing" || credit.job === "Writer"
+        (credit) => credit.department === "Writing" || credit.job === "Writer",
       ),
-    [crew]
+    [crew],
   );
   const crewCategories = useMemo(
     () =>
@@ -419,27 +505,30 @@ export default function MovieDetails() {
           (credit) =>
             credit.job !== "Director" &&
             credit.department !== "Writing" &&
-            credit.job !== "Writer"
-        )
+            credit.job !== "Writer",
+        ),
       ),
-    [crew]
+    [crew],
   );
   const userTitle = userTitles.find(
-    (title) => String(title.id) === String(movie?.id)
+    (title) => String(title.id) === String(movie?.id),
   );
   const userRating = movie ? userRatings[movie.id] : null;
   const cast = movie?.credits?.cast || [];
   const productionCompanies =
-    movie?.production_companies?.map((company) => company.name).filter(Boolean) ||
-    [];
+    movie?.production_companies
+      ?.map((company) => company.name)
+      .filter(Boolean) || [];
 
   return (
     <div>
       <Navbar
         actions={[
           { label: "Home", onClick: () => navigate("/home") },
-          { label: "Search", onClick: () => navigate("/search") },
-          { label: "Watchlist", onClick: () => navigate("/watchlist") }
+          { label: "Watchlist", onClick: () => navigate("/watchlist") },
+          { label: "Reviews", onClick: () => navigate("/reviews") },
+          { label: "Account", onClick: () => navigate("/profile") },
+          { label: "Logout", onClick: handleAuthAction }
         ]}
       />
       <main style={pageStyles.container}>
@@ -452,9 +541,14 @@ export default function MovieDetails() {
           <span>Back</span>
         </button>
 
-        {loading && <div style={pageStyles.message}>Loading movie details...</div>}
+        {loading && (
+          <div style={pageStyles.message}>Loading movie details...</div>
+        )}
         {!loading && error && (
-          <div role="alert" style={{ ...pageStyles.message, ...pageStyles.error }}>
+          <div
+            role="alert"
+            style={{ ...pageStyles.message, ...pageStyles.error }}
+          >
             {error}
           </div>
         )}
@@ -469,7 +563,9 @@ export default function MovieDetails() {
                     style={pageStyles.poster}
                   />
                 ) : (
-                  <div style={pageStyles.posterPlaceholder}>Poster unavailable</div>
+                  <div style={pageStyles.posterPlaceholder}>
+                    Poster unavailable
+                  </div>
                 )}
               </div>
 
@@ -517,9 +613,9 @@ export default function MovieDetails() {
                             backgroundColor: "rgba(244, 201, 107, 0.14)",
                             borderColor: "#f4c96b",
                             color: "#f4c96b",
-                            boxShadow: "0 0 8px rgba(244, 201, 107, 0.4)"
+                            boxShadow: "0 0 8px rgba(244, 201, 107, 0.4)",
                           }
-                        : {})
+                        : {}),
                     }}
                   >
                     <Bookmark
@@ -543,9 +639,9 @@ export default function MovieDetails() {
                         ? {
                             borderColor: "#10b981",
                             color: "#10b981",
-                            boxShadow: "0 0 8px rgba(16, 185, 129, 0.65)"
+                            boxShadow: "0 0 8px rgba(16, 185, 129, 0.65)",
                           }
-                        : {})
+                        : {}),
                     }}
                   >
                     {userTitle?.watched ? (
@@ -570,32 +666,104 @@ export default function MovieDetails() {
                       color="#f4c96b"
                     />
                     <span>
-                      {userRating ? `Your Rating: ${userRating}/10` : "Rate Movie"}
+                      {userRating
+                        ? `Your Rating: ${userRating}/10`
+                        : "Rate Movie"}
                     </span>
                   </button>
                 </div>
                 {watchlistError && (
-                  <p role="alert" style={{ ...pageStyles.personRole, color: "#ffb4b4" }}>
+                  <p
+                    role="alert"
+                    style={{ ...pageStyles.personRole, color: "#ffb4b4" }}
+                  >
                     {watchlistError}
                   </p>
                 )}
                 {ratingsError && (
-                  <p role="alert" style={{ ...pageStyles.personRole, color: "#ffb4b4" }}>
+                  <p
+                    role="alert"
+                    style={{ ...pageStyles.personRole, color: "#ffb4b4" }}
+                  >
                     {ratingsError}
                   </p>
                 )}
               </div>
             </section>
 
+            {/* --- COLLAPSIBLE REVIEWS SECTION --- */}
+            <section style={pageStyles.section}>
+              <h2 style={pageStyles.sectionTitle}>User Reviews</h2>
+              <details style={pageStyles.category} open>
+                <summary style={pageStyles.categoryTitle}>All Reviews</summary>
+                <div style={{ marginTop: "16px" }}>
+                  {reviewsLoading && (
+                    <p style={pageStyles.emptyText}>Loading reviews...</p>
+                  )}
+                  {!reviewsLoading && reviewsError && (
+                    <p style={{ ...pageStyles.emptyText, color: "#ffb4b4" }}>
+                      {reviewsError}
+                    </p>
+                  )}
+                  {!reviewsLoading && !reviewsError && reviews.length === 0 && (
+                    <div style={pageStyles.emptyReviews}>
+                      <MessageSquareText
+                        size={32}
+                        color="#5b5763"
+                        style={{ marginBottom: "12px" }}
+                      />
+                      <p style={pageStyles.emptyText}>
+                        No reviews yet. Be the first to review this movie!
+                      </p>
+                    </div>
+                  )}
+                  {!reviewsLoading && !reviewsError && reviews.length > 0 && (
+                    <div style={pageStyles.reviewsList}>
+                      {reviews.map((review) => (
+                        <article
+                          key={review.review_id}
+                          style={pageStyles.reviewCard}
+                        >
+                          <div style={pageStyles.reviewHeader}>
+                            <div style={pageStyles.reviewUser}>
+                              <UserRound size={18} color="#aaa7b2" />
+                              <span>{review.username}</span>
+                            </div>
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "12px",
+                              }}
+                            >
+                              <span style={pageStyles.reviewDate}>
+                                {new Date(
+                                  review.created_at,
+                                ).toLocaleDateString()}
+                              </span>
+                              {review.user_rating && (
+                                <div style={pageStyles.reviewRating}>
+                                  <Star size={14} fill="#f4c96b" />
+                                  <span>{review.user_rating}/10</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <p style={pageStyles.reviewText}>
+                            {review.review_text}
+                          </p>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </details>
+            </section>
+
             <section style={pageStyles.section}>
               <h2 style={pageStyles.sectionTitle}>Cast and crew</h2>
               {cast.length > 0 && (
-                <StaffCategory
-                  title="Cast"
-                  people={cast}
-                  isCast
-                  defaultOpen
-                />
+                <StaffCategory title="Cast" people={cast} isCast defaultOpen />
               )}
               {directors.length > 0 && (
                 <StaffCategory
@@ -605,11 +773,7 @@ export default function MovieDetails() {
                 />
               )}
               {writers.length > 0 && (
-                <StaffCategory
-                  title="Writer"
-                  people={writers}
-                  defaultOpen
-                />
+                <StaffCategory title="Writer" people={writers} defaultOpen />
               )}
               {crewCategories.map(({ category, people }) => (
                 <StaffCategory
@@ -622,8 +786,10 @@ export default function MovieDetails() {
                 directors.length === 0 &&
                 writers.length === 0 &&
                 crewCategories.length === 0 && (
-                <p style={pageStyles.emptyText}>No cast or crew information available.</p>
-              )}
+                  <p style={pageStyles.emptyText}>
+                    No cast or crew information available.
+                  </p>
+                )}
             </section>
           </>
         )}
