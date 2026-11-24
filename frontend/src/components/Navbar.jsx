@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Film } from "lucide-react";
+import { Film, User } from "lucide-react";
 import SearchBar from "./SearchBar";
 
 const navbarStyles = {
@@ -11,7 +11,8 @@ const navbarStyles = {
     minHeight: "72px",
     display: "flex",
     alignItems: "center",
-    flexWrap: "wrap",
+    justifyContent: "space-between", // Added: pushes logo left and actions right on desktop
+    flexWrap: "wrap", // Allows the entire actions block to drop below the logo on smaller screens
     gap: "16px",
     padding: "12px clamp(20px, 5vw, 72px)",
     backgroundColor: "rgba(16, 16, 20, 0.94)",
@@ -32,8 +33,9 @@ const navbarStyles = {
   actions: {
     display: "flex",
     alignItems: "center",
-    flex: "1 1 420px",
-    justifyContent: "flex-end",
+    flex: "1 1 420px", 
+    justifyContent: "center", // Changed: Centers the buttons nicely when they stack on mobile
+    flexWrap: "wrap", // Added: Forces buttons and search bar to stack instead of squishing/overflowing
     gap: "10px",
     minWidth: 0
   },
@@ -51,10 +53,29 @@ const navbarStyles = {
     alignItems: "center",
     justifyContent: "center",
     whiteSpace: "nowrap"
+  },
+  userInfo: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    color: "#f0edf4",
+    fontWeight: "600",
+    fontSize: "0.95rem",
+    // Removed the left border and margin here so it doesn't look like a stray line if it wraps to its own row on mobile
+  },
+  avatar: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "32px",
+    height: "32px",
+    backgroundColor: "#3a3642",
+    borderRadius: "50%",
+    color: "#f4c96b"
   }
 };
 
-export default function Navbar({ searchProps = {}, showSearch = true, actions = [] }) {
+export default function Navbar({ searchProps = {}, showSearch = true, actions = [], userName }) {
   const navigate = useNavigate();
   const [localSearch, setLocalSearch] = useState("");
   const searchValue = searchProps.value ?? localSearch;
@@ -102,6 +123,14 @@ export default function Navbar({ searchProps = {}, showSearch = true, actions = 
             {label}
           </button>
         ))}
+        {userName && (
+          <div style={navbarStyles.userInfo}>
+            <div style={navbarStyles.avatar}>
+              <User size={16} />
+            </div>
+            <span>{userName}</span>
+          </div>
+        )}
       </div>
     </header>
   );

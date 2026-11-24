@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { isAuthenticated } from "../utils/auth";
-import { fetchRecentReviews, logoutUser } from "../api/userData";
+import { fetchRecentReviews, fetchUserProfile, logoutUser } from "../api/userData";
 import useUserRatings from "../hooks/useUserRatings";
 import useUserWatchlist from "../hooks/useUserWatchlist";
 import MovieCarousel from "../components/MovieCarousel";
@@ -30,6 +30,9 @@ function getTmdbErrorMessage(error, fallback) {
 
 export default function Home() {
   const navigate = useNavigate();
+  // New state to hold the current user's info
+  const [currentUser, setCurrentUser] = useState(null);
+
   const [movieSections, setMovieSections] = useState(() =>
     Object.fromEntries(
       HOME_SECTIONS.map(({ key }) => [
@@ -58,12 +61,29 @@ export default function Home() {
   const [recentReviewsError, setRecentReviewsError] = useState("");
   const [recentReviewsHidden, setRecentReviewsHidden] = useState(true);
 
+  // Added fetchUserProfile logic alongside the auth check
   useEffect(() => {
     const redirectIfSignedOut = () => {
-      if (!isAuthenticated()) navigate("/login", { replace: true });
+      if (!isAuthenticated()) {
+        navigate("/login", { replace: true });
+        return false;
+      }
+      return true;
     };
 
-    redirectIfSignedOut();
+    const loadUser = async () => {
+      if (redirectIfSignedOut()) {
+        try {
+          const profile = await fetchUserProfile();
+          setCurrentUser(profile);
+        } catch (error) {
+          console.error("Failed to load user profile:", error);
+        }
+      }
+    };
+
+    loadUser();
+
     window.addEventListener("storage", redirectIfSignedOut);
     window.addEventListener("focus", redirectIfSignedOut);
     return () => {
@@ -182,6 +202,8 @@ export default function Home() {
   return (
     <div>
       <Navbar
+        // Pass the fetched user's name (or username) to the Navbar
+        userName={currentUser?.name || currentUser?.username}
         searchProps={{
           value: search,
           onChange: (value) => {

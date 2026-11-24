@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Star, Eye, MessageSquareText, Save } from "lucide-react";
+import { isAuthenticated } from "../utils/auth";
 import {
   fetchUserProfile,
   fetchUserStatistics,
@@ -115,13 +116,47 @@ const styles = {
 
 export default function Profile() {
   const navigate = useNavigate();
+  // We use `user` for the form data, and `currentUser` for the Navbar display
+  const [currentUser, setCurrentUser] = useState(null);
   const [user, setUser] = useState(null);
+  
   const [username, setUsername] = useState("");
   const [statistics, setStatistics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  // Authentication and user loading effect
+  useEffect(() => {
+    const redirectIfSignedOut = () => {
+      if (!isAuthenticated()) {
+        navigate("/login", { replace: true });
+        return false;
+      }
+      return true;
+    };
+
+    const loadUser = async () => {
+      if (redirectIfSignedOut()) {
+        try {
+          const profile = await fetchUserProfile();
+          setCurrentUser(profile);
+        } catch (error) {
+          console.error("Failed to load user profile:", error);
+        }
+      }
+    };
+
+    loadUser();
+
+    window.addEventListener("storage", redirectIfSignedOut);
+    window.addEventListener("focus", redirectIfSignedOut);
+    return () => {
+      window.removeEventListener("storage", redirectIfSignedOut);
+      window.removeEventListener("focus", redirectIfSignedOut);
+    };
+  }, [navigate]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -154,6 +189,10 @@ export default function Profile() {
       const updatedUser = await updateUserProfile(username);
       setUser(updatedUser);
       setUsername(updatedUser.username);
+      
+      // Update the navbar user immediately if they change their username
+      setCurrentUser(updatedUser);
+      
       setMessage("Profile updated.");
     } catch (saveError) {
       setError(saveError.response?.data?.message || saveError.message || "Could not update your profile.");
@@ -163,17 +202,19 @@ export default function Profile() {
   }
 
   async function handleAuthAction() {
-  try {
-    await logoutUser();
-  } catch (error) {
-    console.error("Could not revoke user session:", error);
+    try {
+      await logoutUser();
+    } catch (error) {
+      console.error("Could not revoke user session:", error);
+    }
+    navigate("/login", { replace: true });
   }
-  navigate("/login", { replace: true });
-}
 
   return (
     <div>
       <Navbar
+        // Pass the fetched user's name (or username) to the Navbar
+        userName={currentUser?.name || currentUser?.username}
         actions={[
           { label: "Home", onClick: () => navigate("/home") },
           { label: "Watchlist", onClick: () => navigate("/watchlist") },

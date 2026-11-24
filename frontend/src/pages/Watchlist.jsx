@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bookmark } from "lucide-react";
-import { logoutUser } from "../api/userData";
+import { isAuthenticated } from "../utils/auth";
+import { fetchUserProfile, logoutUser } from "../api/userData";
 import useUserRatings from "../hooks/useUserRatings";
 import useUserWatchlist from "../hooks/useUserWatchlist";
 import MovieGrid from "../components/MovieGrid";
@@ -64,6 +65,9 @@ const watchlistStyles = {
 
 export default function Watchlist() {
   const navigate = useNavigate();
+  // New state to hold the current user's profile data
+  const [currentUser, setCurrentUser] = useState(null);
+  
   const [search, setSearch] = useState("");
   const [removedMovies, setRemovedMovies] = useState({});
   const [movieOrder, setMovieOrder] = useState([]);
@@ -78,10 +82,43 @@ export default function Watchlist() {
     handleToggleWatchlist,
     handleToggleWatched
   } = useUserWatchlist();
+  
   const currentMovies = [
     ...userTitles.filter((movie) => movie.in_watchlist),
     ...Object.values(removedMovies)
   ];
+  
+  // Authentication and user loading effect
+  useEffect(() => {
+    const redirectIfSignedOut = () => {
+      if (!isAuthenticated()) {
+        navigate("/login", { replace: true });
+        return false;
+      }
+      return true;
+    };
+
+    const loadUser = async () => {
+      if (redirectIfSignedOut()) {
+        try {
+          const profile = await fetchUserProfile();
+          setCurrentUser(profile);
+        } catch (error) {
+          console.error("Failed to load user profile:", error);
+        }
+      }
+    };
+
+    loadUser();
+
+    window.addEventListener("storage", redirectIfSignedOut);
+    window.addEventListener("focus", redirectIfSignedOut);
+    return () => {
+      window.removeEventListener("storage", redirectIfSignedOut);
+      window.removeEventListener("focus", redirectIfSignedOut);
+    };
+  }, [navigate]);
+
   useEffect(() => {
     setMovieOrder((previous) => {
       const knownIds = new Set(previous);
@@ -100,6 +137,7 @@ export default function Watchlist() {
       return next.length === previous.length ? previous : next;
     });
   }, [userTitles, removedMovies]);
+  
   const orderById = new Map(movieOrder.map((id, index) => [id, index]));
   const movies = [...currentMovies].sort(
     (first, second) =>
@@ -133,17 +171,19 @@ export default function Watchlist() {
   }
 
   async function handleAuthAction() {
-  try {
-    await logoutUser();
-  } catch (error) {
-    console.error("Could not revoke user session:", error);
+    try {
+      await logoutUser();
+    } catch (error) {
+      console.error("Could not revoke user session:", error);
+    }
+    navigate("/login", { replace: true });
   }
-  navigate("/login", { replace: true });
-}
 
   return (
     <div>
       <Navbar
+        // Pass the fetched user's name (or username) to the Navbar
+        userName={currentUser?.name || currentUser?.username}
         searchProps={{
           value: search,
           onChange: setSearch,

@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { MessageSquareText } from "lucide-react";
+import { isAuthenticated } from "../utils/auth";
 import {
   deleteUserReview,
   fetchUserReviews,
+  fetchUserProfile,
   logoutUser,
   saveUserReview
 } from "../api/userData";
@@ -63,6 +65,9 @@ const styles = {
 
 export default function Reviews() {
   const navigate = useNavigate();
+  // New state to hold the current user's profile data
+  const [currentUser, setCurrentUser] = useState(null);
+  
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -76,6 +81,37 @@ export default function Reviews() {
     markMovieReviewed,
     unmarkMovieReviewed
   } = useUserWatchlist();
+
+  // Authentication and user loading effect
+  useEffect(() => {
+    const redirectIfSignedOut = () => {
+      if (!isAuthenticated()) {
+        navigate("/login", { replace: true });
+        return false;
+      }
+      return true;
+    };
+
+    const loadUser = async () => {
+      if (redirectIfSignedOut()) {
+        try {
+          const profile = await fetchUserProfile();
+          setCurrentUser(profile);
+        } catch (error) {
+          console.error("Failed to load user profile:", error);
+        }
+      }
+    };
+
+    loadUser();
+
+    window.addEventListener("storage", redirectIfSignedOut);
+    window.addEventListener("focus", redirectIfSignedOut);
+    return () => {
+      window.removeEventListener("storage", redirectIfSignedOut);
+      window.removeEventListener("focus", redirectIfSignedOut);
+    };
+  }, [navigate]);
 
   async function markMovieWatched(movie) {
     const userTitle = userTitles.find(
@@ -125,17 +161,19 @@ export default function Reviews() {
   }
 
   async function handleAuthAction() {
-  try {
-    await logoutUser();
-  } catch (error) {
-    console.error("Could not revoke user session:", error);
+    try {
+      await logoutUser();
+    } catch (error) {
+      console.error("Could not revoke user session:", error);
+    }
+    navigate("/login", { replace: true });
   }
-  navigate("/login", { replace: true });
-}
 
   return (
     <div>
       <Navbar
+        // Pass the fetched user's name (or username) to the Navbar
+        userName={currentUser?.name || currentUser?.username}
         actions={[
           { label: "Home", onClick: () => navigate("/home") },
           { label: "Watchlist", onClick: () => navigate("/watchlist") },

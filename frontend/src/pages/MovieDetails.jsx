@@ -9,8 +9,9 @@ import {
   Star,
   UserRound,
 } from "lucide-react";
+import { isAuthenticated } from "../utils/auth";
 import { fetchMovieDetails } from "../api/tmdb";
-import { fetchMovieReviews } from "../api/userData";
+import { fetchMovieReviews, fetchUserProfile, logoutUser } from "../api/userData";
 import useUserRatings from "../hooks/useUserRatings";
 import useUserWatchlist from "../hooks/useUserWatchlist";
 import { MovieRatingDialog } from "../components/MovieCard";
@@ -391,18 +392,13 @@ function StaffCategory({ title, people, isCast = false, defaultOpen = false }) {
   );
 }
 
-async function handleAuthAction() {
-  try {
-    await logoutUser();
-  } catch (error) {
-    console.error("Could not revoke user session:", error);
-  }
-  navigate("/login", { replace: true });
-}
-
 export default function MovieDetails() {
   const navigate = useNavigate();
   const { movieId } = useParams();
+  
+  // New state to hold the current user's profile data
+  const [currentUser, setCurrentUser] = useState(null);
+  
   const [movie, setMovie] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -420,6 +416,37 @@ export default function MovieDetails() {
     handleToggleWatched,
   } = useUserWatchlist();
 
+  // Authentication and user loading effect
+  useEffect(() => {
+    const redirectIfSignedOut = () => {
+      if (!isAuthenticated()) {
+        navigate("/login", { replace: true });
+        return false;
+      }
+      return true;
+    };
+
+    const loadUser = async () => {
+      if (redirectIfSignedOut()) {
+        try {
+          const profile = await fetchUserProfile();
+          setCurrentUser(profile);
+        } catch (error) {
+          console.error("Failed to load user profile:", error);
+        }
+      }
+    };
+
+    loadUser();
+
+    window.addEventListener("storage", redirectIfSignedOut);
+    window.addEventListener("focus", redirectIfSignedOut);
+    return () => {
+      window.removeEventListener("storage", redirectIfSignedOut);
+      window.removeEventListener("focus", redirectIfSignedOut);
+    };
+  }, [navigate]);
+
   async function saveRatingAndMarkWatched(ratingMovie, rating) {
     const saved = await handleSaveRating(ratingMovie, rating);
     if (saved === false) return false;
@@ -434,6 +461,15 @@ export default function MovieDetails() {
       throw new Error("Rating saved, but could not mark the movie as watched.");
     }
     return true;
+  }
+
+  async function handleAuthAction() {
+    try {
+      await logoutUser();
+    } catch (error) {
+      console.error("Could not revoke user session:", error);
+    }
+    navigate("/login", { replace: true });
   }
 
   useEffect(() => {
@@ -523,6 +559,7 @@ export default function MovieDetails() {
   return (
     <div>
       <Navbar
+        userName={currentUser?.name || currentUser?.username}
         actions={[
           { label: "Home", onClick: () => navigate("/home") },
           { label: "Watchlist", onClick: () => navigate("/watchlist") },
