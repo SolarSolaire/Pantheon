@@ -1,15 +1,10 @@
 .home-content-layout {
   --home-horizontal-gutter: clamp(20px, 5vw, 72px);
   position: relative;
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: var(--home-horizontal-gutter);
-  align-items: start;
-  transition: grid-template-columns 220ms ease;
-}
-
-.home-content-layout.is-review-panel-collapsed {
-  grid-template-columns: 1fr 36px;
+  /* Changed from a 2-column grid to a single column flexbox since the sidebar is gone */
+  display: flex; 
+  flex-direction: column;
+  gap: 40px;
 }
 
 .home-movie-sections {
@@ -49,107 +44,62 @@
   background: linear-gradient(to left, #101014, rgba(16, 16, 20, 0));
 }
 
-.recent-reviews {
-  position: relative;
-  z-index: 10;
+@media (prefers-reduced-motion: reduce) {
+  .home-movie-carousel-edge-shade {
+    transition: none;
+  }
+}
+
+/* --- RECENT REVIEWS CAROUSEL --- */
+
+.recent-reviews-section {
   width: 100%;
   min-width: 0;
-  max-width: 100%;
-  margin: 0;
-  overflow: hidden;
-  box-sizing: border-box;
-  border: 1px solid #5b5763;
-  border-radius: 10px;
-  background: #19181e;
-  color: #f5f3ef;
-  transition: background-color 220ms ease, border-color 220ms ease;
-}
-
-.recent-reviews-inner {
-  width: 100%;
-  min-width: 300px;
-  padding: 10px 10px 10px 46px;
-  box-sizing: border-box;
-}
-
-.recent-reviews.is-collapsed {
-  border-color: transparent;
-  background: transparent;
 }
 
 .recent-reviews-header {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 8px;
-  min-height: 26px;
-  padding-left: 0;
-  box-sizing: border-box;
-}
-
-.recent-reviews.is-collapsed .recent-reviews-header {
-  justify-content: center;
+  margin-bottom: 16px;
 }
 
 .recent-reviews-heading {
-  min-width: 0;
   margin: 0;
   color: #f5f3ef;
-  font-size: 0.9rem;
-  font-weight: 800;
-  white-space: nowrap;
+  font-size: 1.45rem; 
 }
 
-.recent-reviews-toggle {
-  position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
+.recent-reviews-carousel {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 100%;
-  padding: 0;
-  border: none;
-  border-right: 1px solid #5b5763;
-  border-radius: 0;
-  background: #242229;
-  color: #e1dee6;
-  cursor: pointer;
-  transition: background-color 220ms ease, border-color 220ms ease;
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 16px; 
+  scroll-snap-type: x mandatory;
 }
 
-.recent-reviews.is-collapsed .recent-reviews-toggle {
-  border: 1px solid #5b5763;
-  border-radius: 10px;
+/* Hides the scrollbar background but keeps the thumb for modern browsers */
+.recent-reviews-carousel::-webkit-scrollbar {
+  height: 8px;
+}
+.recent-reviews-carousel::-webkit-scrollbar-thumb {
+  background-color: #44414b;
+  border-radius: 4px;
 }
 
-.recent-reviews-toggle:hover:not(:disabled) {
-  background: #322f3b;
-  color: #fff;
-}
-
-.recent-reviews-list {
-  display: grid;
+.recent-review-card {
+  flex: 0 0 300px; /* Forces cards to be exactly 300px wide */
+  scroll-snap-align: start;
+  padding: 16px;
+  background-color: #19181e;
+  border: 1px solid #2b2931;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
   gap: 8px;
-  margin-top: 10px;
-}
-
-.recent-review {
-  min-width: 0;
-  padding: 8px;
-  border: 1px solid #45414c;
-  border-radius: 7px;
-  background: #201f26;
 }
 
 .recent-review-movie {
-  display: block;
   color: #f5f3ef;
-  font-size: 0.78rem;
+  font-size: 1rem;
   font-weight: 700;
-  line-height: 1.3;
   text-decoration: none;
   overflow-wrap: anywhere;
 }
@@ -158,55 +108,177 @@
   color: #60a5fa;
 }
 
-.recent-review-author,
-.recent-review-timestamp {
-  display: block;
-  margin-top: 3px;
+.recent-review-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
   color: #aaa7b2;
-  font-size: 0.64rem;
-  line-height: 1.35;
-  overflow-wrap: anywhere;
 }
 
 .recent-review-rating {
   display: flex;
   align-items: center;
-  gap: 3px;
-  margin-top: 5px;
+  gap: 4px;
   color: #f4c96b;
-  font-size: 0.68rem;
   font-weight: 700;
 }
 
 .recent-review-text {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #d0cdd5;
+  line-height: 1.5;
   display: -webkit-box;
-  margin: 5px 0 0;
-  overflow: hidden;
-  color: #c7c3ce;
-  font-size: 0.72rem;
-  line-height: 1.4;
-  overflow-wrap: anywhere;
-  white-space: pre-wrap;
+  -webkit-line-clamp: 4; /* Truncates after 4 lines */
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+  overflow: hidden;
+  white-space: pre-wrap;
+}
+
+.recent-review-timestamp {
+  margin-top: auto; /* Forces the timestamp to the very bottom of the card */
+  font-size: 0.8rem;
+  color: #85818d;
 }
 
 .recent-reviews-message {
-  margin: 10px 0 0;
   color: #aaa7b2;
-  font-size: 0.74rem;
-  line-height: 1.4;
-  overflow-wrap: anywhere;
+  font-size: 0.9rem;
 }
 
 .recent-reviews-message.is-error {
   color: #ffb4b4;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .recent-reviews,
-  .home-movie-carousel-edge-shade,
+.home-content-layout {
+  --home-horizontal-gutter: clamp(20px, 5vw, 72px);
+  position: relative;
+  display: grid;
+  /* 1fr for movies, 340px fixed width for the reviews sidebar */
+  grid-template-columns: minmax(0, 1fr) 340px; 
+  gap: var(--home-horizontal-gutter);
+  align-items: start;
+}
+
+/* If the screen gets too small, stack them vertically */
+@media (max-width: 1024px) {
   .home-content-layout {
-    transition: none;
+    grid-template-columns: 1fr;
   }
+}
+
+.home-movie-sections {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+/* --- RECENT REVIEWS VERTICAL SIDEBAR --- */
+
+.recent-reviews-section {
+  width: 100%;
+  min-width: 0;
+  /* Makes the sidebar stick to the screen as you scroll down the movies */
+  position: sticky;
+  top: 96px; 
+  /* Limits height to the viewport so the inside can scroll */
+  max-height: calc(100vh - 120px); 
+  display: flex;
+  flex-direction: column;
+}
+
+.recent-reviews-header {
+  margin-bottom: 16px;
+  flex-shrink: 0;
+}
+
+.recent-reviews-heading {
+  margin: 0;
+  color: #f5f3ef;
+  font-size: 1.45rem; 
+}
+
+.recent-reviews-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  padding-right: 12px; /* Room for the scrollbar */
+}
+
+/* Hides the scrollbar background but keeps the thumb */
+.recent-reviews-list::-webkit-scrollbar {
+  width: 6px;
+}
+.recent-reviews-list::-webkit-scrollbar-thumb {
+  background-color: #44414b;
+  border-radius: 4px;
+}
+
+.recent-review-card {
+  padding: 16px;
+  background-color: #19181e;
+  border: 1px solid #2b2931;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0; /* Prevents cards from squishing */
+}
+
+.recent-review-movie {
+  color: #f5f3ef;
+  font-size: 1rem;
+  font-weight: 700;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.recent-review-movie:hover {
+  color: #60a5fa;
+}
+
+.recent-review-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  color: #aaa7b2;
+}
+
+.recent-review-rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #f4c96b;
+  font-weight: 700;
+}
+
+.recent-review-text {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #d0cdd5;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 4; /* Truncates after 4 lines */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: pre-wrap;
+}
+
+.recent-review-timestamp {
+  margin-top: auto; 
+  font-size: 0.8rem;
+  color: #85818d;
+}
+
+.recent-reviews-message {
+  color: #aaa7b2;
+  font-size: 0.9rem;
+}
+
+.recent-reviews-message.is-error {
+  color: #ffb4b4;
 }
