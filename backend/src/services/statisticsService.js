@@ -34,8 +34,19 @@ class StatisticsService {
     };
   }
 
+  async calculateTotalWatchTime(userId) {
+    const result = await db.query(
+      `SELECT SUM(titles.runtime)::integer AS total_minutes
+       FROM user_titles
+       JOIN titles USING (title_id)
+       WHERE user_titles.user_id = $1 AND user_titles.watched = TRUE`,
+      [userId]
+    );
+    return result.rows[0].total_minutes || 0;
+  }
+
   async getStatistics(userId) {
-    const [moviesWatched, averageRating, ratingSummary, reviewCount] =
+    const [moviesWatched, averageRating, ratingSummary, reviewCount, totalWatchTimeMinutes] =
       await Promise.all([
         this.calculateMoviesWatched(userId),
         this.calculateAverageRating(userId),
@@ -43,13 +54,16 @@ class StatisticsService {
         db.query(
           'SELECT COUNT(*)::integer AS count FROM user_feedback WHERE user_id = $1 AND review_text IS NOT NULL',
           [userId]
-        )
+        ),
+        this.calculateTotalWatchTime(userId)
       ]);
+      
     return {
       moviesWatched,
       averageRating,
       ratings: ratingSummary,
-      reviews: reviewCount.rows[0].count
+      reviews: reviewCount.rows[0].count,
+      totalWatchTimeMinutes
     };
   }
 }

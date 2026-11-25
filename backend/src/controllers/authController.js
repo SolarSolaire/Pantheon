@@ -1,5 +1,7 @@
 const authService = require('../services/authService');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
+const db = require('../config/db'); 
 
 function createAuthToken(user, sessionId) {
   const secret = process.env.JWT_SECRET;
@@ -13,7 +15,7 @@ function createAuthToken(user, sessionId) {
 
 async function createSessionResponse(res, user, status = 200) {
   const session = await authService.createSession(user.user_id);
-  const token = createAuthToken(user, session.session_id);
+  const token = createAuthToken(user, session.session_id); 
   res.status(status).json({ message: 'Authenticated successfully.', user, token });
 }
 
@@ -99,6 +101,46 @@ class AuthController {
       }
       console.error('Could not update user profile:', error);
       res.status(500).json({ message: 'Could not update user profile.' });
+    }
+  }
+
+  async updatePassword(req, res) {
+    const { currentPassword, newPassword } = req.body || {};
+    
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: 'Current and new passwords are required.' });
+    }
+    
+    if (newPassword.length < 8) {
+      return res.status(400).json({ message: 'New password must be at least 8 characters.' });
+    }
+
+    try {
+      const result = await db.query(
+        'SELECT password FROM users WHERE user_id = $1',
+        [req.user.user_id]
+      );
+
+      if (result.rowCount === 0) {
+        return res.status(404).json({ message: 'User not found.' });
+      }
+
+      const isValid = await bcrypt.compare(currentPassword, result.rows[0].password);
+      if (!isValid) {
+        return res.status(401).json({ message: 'Incorrect current password.' });
+      }
+
+      const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+      
+      await db.query(
+        'UPDATE users SET password = $1 WHERE user_id = $2',
+        [hashedNewPassword, req.user.user_id]
+      );
+
+      res.json({ message: 'Password updated successfully.' });
+    } catch (error) {
+      console.error('Could not update password:', error);
+      res.status(500).json({ message: 'Could not update password.' });
     }
   }
 }

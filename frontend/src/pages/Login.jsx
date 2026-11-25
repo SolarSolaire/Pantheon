@@ -1,25 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Film, Lock, User, ArrowRight, Sparkles } from "lucide-react";
+import { Film, Lock, User, ArrowRight } from "lucide-react";
 import api from "../api/axios";
 import styles from "../styles.jsx";
 
 export default function Login() {
-  const [backendStatus, setBackendStatus] = useState("Connecting to backend...");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
-
-  useEffect(() => {
-    // pings backend server running on port 5001
-    api
-      .get("/health")
-      .then((res) => setBackendStatus(res.data.message))
-      .catch((err) =>
-        setBackendStatus(`Backend offline or CORS issue: ${err.message}`)
-      );
-  }, []);
 
   // attempts to login, navigating to the home page if successful
   const handleLogin = async (e) => {
@@ -54,10 +43,6 @@ export default function Login() {
             <p style={styles.auth.authBrandSubtitle}>
               Enter the gateway to log, rate, and discover your personal collection of cinema.
             </p>
-          </div>
-          <div style={styles.auth.authBrandFooter}>
-            <Sparkles size={16} color="#f4c96b" />
-            <span>Frontend active on port 5173</span>
           </div>
         </div>
 
@@ -99,12 +84,6 @@ export default function Login() {
               Log In <ArrowRight size={18} />
             </button>
           </form>
-
-          {/* Backend Health Status Box */}
-          <div style={styles.auth.loginStatusBox}>
-            <span style={styles.auth.loginStatusTitle}>Backend Status (Port 5001):</span>
-            <p style={styles.auth.loginStatusMessage}>{backendStatus}</p>
-          </div>
 
           {/* Secondary Actions */}
           <div style={styles.auth.loginActionRow}>

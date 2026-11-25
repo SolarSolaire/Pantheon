@@ -1,5 +1,6 @@
 const db = require('../config/db');
 const statisticsService = require('../services/statisticsService');
+const bcrypt = require('bcrypt');
 
 function getMovieId(value) {
   const movieId = String(value ?? '');
@@ -18,8 +19,8 @@ function getMovieData(value, movieId) {
     overview: typeof value.overview === 'string' ? value.overview : '',
     release_date: typeof value.release_date === 'string' ? value.release_date : '',
     poster_path: typeof value.poster_path === 'string' ? value.poster_path : null,
-    production_company:
-      typeof value.production_company === 'string' ? value.production_company : null
+    production_company: typeof value.production_company === 'string' ? value.production_company : null,
+    runtime: typeof value.runtime === 'number' ? value.runtime : 0 // <-- Add this line
   };
 }
 
@@ -30,9 +31,9 @@ async function upsertTitle(movieData, client = db) {
   const result = await client.query(
     `INSERT INTO titles (
        tmdb_id, name, media_type, overview, release_date, poster_path,
-       production_company, updated_at
+       production_company, runtime, updated_at
      )
-     VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP)
      ON CONFLICT (tmdb_id)
      DO UPDATE SET name = EXCLUDED.name,
                    media_type = EXCLUDED.media_type,
@@ -40,6 +41,7 @@ async function upsertTitle(movieData, client = db) {
                    release_date = EXCLUDED.release_date,
                    poster_path = EXCLUDED.poster_path,
                    production_company = EXCLUDED.production_company,
+                   runtime = EXCLUDED.runtime,
                    updated_at = CURRENT_TIMESTAMP
      RETURNING title_id`,
     [
@@ -49,7 +51,8 @@ async function upsertTitle(movieData, client = db) {
       movieData.overview || null,
       releaseDate,
       movieData.poster_path,
-      movieData.production_company
+      movieData.production_company,
+      movieData.runtime // <-- Add this parameter
     ]
   );
   return result.rows[0].title_id;
@@ -521,5 +524,42 @@ exports.deleteReview = (req, res) => {
       [req.user.user_id, movieId]
     );
     res.status(204).end();
+  });
+};
+
+exports.updatePassword = (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ message: 'Current and new passwords are required.' });
+  }
+  
+  if (newPassword.length < 8) {
+    return res.status(400).json({ message: 'New password must be at least 8 characters.' });
+  }
+
+  return handleDatabaseError(res, 'Could not update password.', async () => {
+    const result = await db.query(
+      'SELECT password FROM users WHERE user_id = $1',
+      [req.user.user_id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    const isValid = await bcrypt.compare(currentPassword, result.rows[0].password);
+    if (!isValid) {
+      return res.status(401).json({ message: 'Incorrect current password.' });
+    }
+
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    
+    await db.query(
+      'UPDATE users SET password = $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2',
+      [hashedNewPassword, req.user.user_id]
+    );
+
+    res.json({ message: 'Password updated successfully.' });
   });
 };

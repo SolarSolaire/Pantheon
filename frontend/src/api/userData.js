@@ -201,3 +201,11 @@ export const fetchMovieReviews = async (movieId, signal) => {
   const response = await api.get(`/user-data/movies/${movieId}/all-reviews`, { signal });
   return response.data.reviews;
 };
+
+export async function updateUserPassword(currentPassword, newPassword) {
+  const { data } = await api.put("/auth/password", {
+    currentPassword,
+    newPassword
+  });
+  return data;
+}

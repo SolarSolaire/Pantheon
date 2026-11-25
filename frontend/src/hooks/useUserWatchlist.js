@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { fetchMovieDetails } from "../api/tmdb"; // <-- Added this import
 import {
   addMovieToUserWatchlist,
   ensureLegacyUserDataMigrated,
@@ -64,11 +65,26 @@ export default function useUserWatchlist() {
   }, [userTitles]);
 
   const handleToggleWatched = useCallback(async (movie) => {
+    // 1. Create a copy of the movie payload
+    let moviePayload = { ...movie };
+
+    // 2. Intercept missing runtime (e.g., when clicking from the Home screen)
+    if (typeof moviePayload.runtime !== 'number' || moviePayload.runtime === 0) {
+      try {
+        const fullDetails = await fetchMovieDetails(movie.id);
+        moviePayload.runtime = fullDetails.runtime || 0;
+      } catch (err) {
+        console.error("Could not fetch missing runtime for stats:", err);
+        moviePayload.runtime = 0;
+      }
+    }
+
     const userTitle = userTitles.find(
       (item) => String(item.id) === String(movie.id)
     );
     try {
-      setUserTitles(await setUserTitleWatched(movie, !userTitle?.watched));
+      // 3. Send the enriched moviePayload instead of the raw movie
+      setUserTitles(await setUserTitleWatched(moviePayload, !userTitle?.watched));
       setWatchlistError("");
       return true;
     } catch (error) {

@@ -32,6 +32,7 @@ async function createCurrentSchema(client) {
       release_date DATE,
       poster_path TEXT,
       production_company TEXT,
+      runtime INTEGER DEFAULT 0,
       created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
@@ -71,12 +72,18 @@ async function createCurrentSchema(client) {
       CHECK (rating IS NOT NULL OR review_text IS NOT NULL)
     )
   `);
+  
+  // Failsafe schema updates for existing tables
+  await client.query(
+    'ALTER TABLE titles ADD COLUMN IF NOT EXISTS runtime INTEGER DEFAULT 0'
+  );
   await client.query(
     'ALTER TABLE user_feedback ADD COLUMN IF NOT EXISTS review_created_at TIMESTAMPTZ'
   );
   await client.query(
     'ALTER TABLE user_feedback ADD COLUMN IF NOT EXISTS review_updated_at TIMESTAMPTZ'
   );
+  
   await client.query(`
     UPDATE user_feedback
     SET review_created_at = COALESCE(review_created_at, created_at),

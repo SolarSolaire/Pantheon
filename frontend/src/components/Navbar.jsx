@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Film, User } from "lucide-react";
 import SearchBar from "./SearchBar";
 
@@ -11,8 +11,8 @@ const navbarStyles = {
     minHeight: "72px",
     display: "flex",
     alignItems: "center",
-    justifyContent: "space-between", // Added: pushes logo left and actions right on desktop
-    flexWrap: "wrap", // Allows the entire actions block to drop below the logo on smaller screens
+    justifyContent: "space-between",
+    flexWrap: "wrap",
     gap: "16px",
     padding: "12px clamp(20px, 5vw, 72px)",
     backgroundColor: "rgba(16, 16, 20, 0.94)",
@@ -33,12 +33,13 @@ const navbarStyles = {
   actions: {
     display: "flex",
     alignItems: "center",
-    flex: "1 1 420px", 
-    justifyContent: "center", // Changed: Centers the buttons nicely when they stack on mobile
-    flexWrap: "wrap", // Added: Forces buttons and search bar to stack instead of squishing/overflowing
+    flex: "1 1 auto", 
+    justifyContent: "flex-end", 
+    flexWrap: "wrap",
     gap: "10px",
-    minWidth: 0
+    minWidth: "320px" 
   },
+  // Base button styling
   button: {
     padding: "10px 16px",
     border: "1px solid #44414b",
@@ -48,11 +49,24 @@ const navbarStyles = {
     backgroundColor: "#242229",
     color: "#f0edf4",
     cursor: "pointer",
-    transition: "transform 0.15s ease",
+    transition: "all 0.15s ease",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
     whiteSpace: "nowrap"
+  },
+  // Gold highlighted state for the active tab
+  buttonActive: {
+    backgroundColor: "rgba(244, 201, 107, 0.14)",
+    borderColor: "#f4c96b",
+    color: "#f4c96b",
+    boxShadow: "0 0 8px rgba(244, 201, 107, 0.25)"
+  },
+  // Subtle red state for the logout button
+  buttonLogout: {
+    backgroundColor: "rgba(255, 77, 77, 0.08)",
+    borderColor: "#6a3338",
+    color: "#ffb4b4",
   },
   userInfo: {
     display: "flex",
@@ -61,7 +75,6 @@ const navbarStyles = {
     color: "#f0edf4",
     fontWeight: "600",
     fontSize: "0.95rem",
-    // Removed the left border and margin here so it doesn't look like a stray line if it wraps to its own row on mobile
   },
   avatar: {
     display: "flex",
@@ -77,6 +90,7 @@ const navbarStyles = {
 
 export default function Navbar({ searchProps = {}, showSearch = true, actions = [], userName }) {
   const navigate = useNavigate();
+  const location = useLocation(); // Gets the current URL path
   const [localSearch, setLocalSearch] = useState("");
   const searchValue = searchProps.value ?? localSearch;
   const handleSearchChange = searchProps.onChange ?? setLocalSearch;
@@ -89,6 +103,17 @@ export default function Navbar({ searchProps = {}, showSearch = true, actions = 
 
     const query = searchValue.trim();
     navigate(query ? `/search?query=${encodeURIComponent(query)}` : "/search");
+  }
+
+  // Helper to figure out if a button should be highlighted based on the current URL
+  function checkIsActive(label) {
+    const currentPath = location.pathname.toLowerCase();
+    
+    // Account maps to /profile, everything else maps to its own name
+    if (label === "Account" && currentPath.includes("/profile")) return true;
+    if (label !== "Account" && label !== "Logout" && currentPath.includes(`/${label.toLowerCase()}`)) return true;
+    
+    return false;
   }
 
   return (
@@ -113,16 +138,28 @@ export default function Navbar({ searchProps = {}, showSearch = true, actions = 
             onSubmit={handleSearchSubmit}
           />
         )}
-        {actions.map(({ label, onClick }) => (
-          <button
-            key={label}
-            type="button"
-            style={navbarStyles.button}
-            onClick={onClick}
-          >
-            {label}
-          </button>
-        ))}
+        {actions.map(({ label, onClick }) => {
+          const isActive = checkIsActive(label);
+          const isLogout = label === "Logout";
+
+          // Dynamically combine styles based on the button's purpose
+          const combinedStyle = {
+            ...navbarStyles.button,
+            ...(isActive ? navbarStyles.buttonActive : {}),
+            ...(isLogout ? navbarStyles.buttonLogout : {})
+          };
+
+          return (
+            <button
+              key={label}
+              type="button"
+              style={combinedStyle}
+              onClick={onClick}
+            >
+              {label}
+            </button>
+          );
+        })}
         {userName && (
           <div style={navbarStyles.userInfo}>
             <div style={navbarStyles.avatar}>

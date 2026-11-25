@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import styles from "../styles.jsx";
 import { isAuthenticated } from "../utils/auth";
-import { logoutUser } from "../api/userData";
+import { fetchUserProfile, logoutUser } from "../api/userData";
 import useUserRatings from "../hooks/useUserRatings";
 import useUserWatchlist from "../hooks/useUserWatchlist";
 import MovieGrid from "../components/MovieGrid";
@@ -17,86 +17,7 @@ import {
 
 /*
 const MOCK_MOVIES = [
-  {
-    id: 27205,
-    title: "Inception",
-    release_date: "2010-07-15",
-    vote_average: 8.4,
-    genre: "Sci-Fi",
-    poster_path: "https://image.tmdb.org/t/p/w500/oYuLEt3zVCKq57qu2F8dT7NIa6f.jpg",
-    overview:
-      "Cobb, a skilled thief who steals corporate secrets through the use of dream-sharing technology, is given the inverse task of planting an idea into the mind of a C.E.O."
-  },
-  {
-    id: 155,
-    title: "The Dark Knight",
-    release_date: "2008-07-16",
-    vote_average: 8.5,
-    genre: "Action",
-    poster_path: "https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg",
-    overview:
-      "Batman raises the stakes in his war on crime. With the help of Lt. Jim Gordon and District Attorney Harvey Dent, Batman sets out to dismantle the remaining criminal organizations that plague the streets."
-  },
-  {
-    id: 157336,
-    title: "Interstellar",
-    release_date: "2014-11-05",
-    vote_average: 8.4,
-    genre: "Sci-Fi",
-    poster_path: "https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg",
-    overview:
-      "The adventures of a group of explorers who make use of a newly discovered wormhole to surpass the limitations on human space travel and conquer the vast distances involved in an interstellar voyage."
-  },
-  {
-    id: 693134,
-    title: "Dune: Part Two",
-    release_date: "2024-02-27",
-    vote_average: 8.2,
-    genre: "Sci-Fi",
-    poster_path: "https://image.tmdb.org/t/p/w500/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg",
-    overview:
-      "Follow the mythic journey of Paul Atreides as he unites with Chani and the Fremen while on a path of revenge against the conspirators who destroyed his family."
-  },
-  {
-    id: 129,
-    title: "Spirited Away",
-    release_date: "2001-07-20",
-    vote_average: 8.5,
-    genre: "Animation",
-    poster_path: "https://image.tmdb.org/t/p/w500/39wmItIWsg5sZMyRUHLkWBcuVCM.jpg",
-    overview:
-      "A young girl, Chihiro, becomes trapped in a strange new world of spirits. When her parents undergo a mysterious transformation, she must call upon the courage she never knew she had to free her family."
-  },
-  {
-    id: 680,
-    title: "Pulp Fiction",
-    release_date: "1994-09-10",
-    vote_average: 8.5,
-    genre: "Crime",
-    poster_path: "https://image.tmdb.org/t/p/w500/d5iIlFn5s0ImszYzBPb8JPIfbXD.jpg",
-    overview:
-      "A burger-loving hit man, his philosophical partner, a drug-addled gangster's moll and a washed-up boxer converge in this sprawling, comedic crime caper."
-  },
-  {
-    id: 496243,
-    title: "Parasite",
-    release_date: "2019-05-30",
-    vote_average: 8.5,
-    genre: "Drama",
-    poster_path: "https://image.tmdb.org/t/p/w500/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg",
-    overview:
-      "All unemployed, Ki-taek's family takes peculiar interest in the wealthy and glamorous Parks for their livelihood until they get entangled in an unexpected incident."
-  },
-  {
-    id: 324857,
-    title: "Spider-Man: Into the Spider-Verse",
-    release_date: "2018-12-06",
-    vote_average: 8.4,
-    genre: "Animation",
-    poster_path: "https://image.tmdb.org/t/p/w500/iiZZdoQBEYBv6id8su7ImL0oCbD.jpg",
-    overview:
-      "Teenager Miles Morales becomes the new Spider-Man and must join forces with five other spider-powered individuals from other dimensions to stop a threat to all realities."
-  }
+  ... (Mock data omitted for brevity)
 ];
 */
 
@@ -126,6 +47,7 @@ export default function Search() {
     handleToggleWatched
   } = useUserWatchlist();
   const [isSignedIn, setIsSignedIn] = useState(isAuthenticated);
+  const [currentUser, setCurrentUser] = useState(null); // Added currentUser state
   const [movies, setMovies] = useState([]);
   const [moviesLoading, setMoviesLoading] = useState(true);
   const [moviesError, setMoviesError] = useState("");
@@ -133,6 +55,21 @@ export default function Search() {
   useEffect(() => {
     setSearchQuery(searchParams.get("query") || "");
   }, [searchParams]);
+
+  // Added effect to fetch user profile when signed in
+  useEffect(() => {
+    const loadUser = async () => {
+      if (isAuthenticated()) {
+        try {
+          const profile = await fetchUserProfile();
+          setCurrentUser(profile);
+        } catch (error) {
+          console.error("Failed to load user profile:", error);
+        }
+      }
+    };
+    loadUser();
+  }, []);
 
   useEffect(() => {
     const query = searchQuery.trim();
@@ -223,6 +160,7 @@ export default function Search() {
     <div>
       <Navbar
         showSearch={false}
+        userName={currentUser?.name || currentUser?.username} // Passed down user name
         actions={[
           { label: "Home", onClick: () => navigate("/home") },
           { label: "Watchlist", onClick: () => navigate("/watchlist") },
@@ -349,5 +287,3 @@ export default function Search() {
     </div>
   );
 }
-
-// Styling matching Home page cinematic theme (no white borders)
