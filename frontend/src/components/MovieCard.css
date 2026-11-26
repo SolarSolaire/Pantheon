@@ -5,10 +5,9 @@
 .movie-card-button::after {
   content: "";
   position: absolute;
-  inset: -3px;
-  border: 1px solid currentColor;
+  inset: 0;
   border-radius: inherit;
-  box-shadow: 0 0 5px 1px currentColor;
+  box-shadow: 0 0 6px 1px currentColor;
   opacity: 0;
   pointer-events: none;
   transition: opacity 140ms ease;
@@ -20,6 +19,15 @@
 
 .movie-card-wrap {
   position: relative;
+  isolation: isolate;
+}
+
+.movie-card-hover-buffer {
+  position: absolute;
+  inset: -12px;
+  z-index: -1;
+  pointer-events: auto;
+  cursor: default;
 }
 
 .movie-card-surface {

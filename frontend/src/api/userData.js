@@ -124,7 +124,7 @@ export async function fetchUserTitles(signal) {
 
 export async function addMovieToUserWatchlist(movie) {
   const { data } = await api.post("/user-data/watchlist", movie);
-  return data.titles;
+  return data;
 }
 
 export async function setUserTitleWatched(movie, watched) {
@@ -139,7 +139,7 @@ export async function removeMovieFromUserWatchlist(movieId) {
   const { data } = await api.delete(
     `/user-data/watchlist/${encodeURIComponent(movieId)}`
   );
-  return data.titles;
+  return data;
 }
 
 export async function fetchUserReviews(signal) {

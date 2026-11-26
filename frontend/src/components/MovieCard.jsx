@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { fetchMovieProductionCompany } from "../api/tmdb";
 import { saveUserReview } from "../api/userData";
 import { isAuthenticated } from "../utils/auth";
+import MovieCardControls from "./MovieCardControls";
 import ReviewComposerDialog from "./ReviewComposerDialog";
 import "./MovieCard.css";
 
@@ -77,30 +78,6 @@ const movieStyles = {
     width: "calc(100% - 24px)",
     overflow: "hidden"
   },
-  posterControl: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "4px",
-    width: "100%",
-    minWidth: 0,
-    height: "36px",
-    padding: "0 4px",
-    border: "1px solid #4a4651",
-    borderRadius: "8px",
-    backgroundColor: "transparent",
-    color: "#f5f3ef",
-    cursor: "pointer"
-  },
-  posterControlRow: {
-    display: "grid",
-    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    alignItems: "center",
-    justifyItems: "center",
-    gap: "6px",
-    width: "100%",
-    marginTop: "8px"
-  },
   posterTitle: {
     color: "#f5f3ef",
     fontSize: "1rem",
@@ -144,12 +121,6 @@ const movieStyles = {
     fontSize: "0.72rem",
     lineHeight: "1.2",
     overflowWrap: "anywhere"
-  },
-  userRatingButton: {
-    cursor: "pointer",
-    fontSize: "0.76rem",
-    fontWeight: "800",
-    whiteSpace: "nowrap"
   },
   removeButton: {
     position: "absolute",
@@ -1587,104 +1558,17 @@ export default function MovieCard({
           )}
         </div>
         </div>
-        {(onToggleWatched || onSaveRating || onToggleWatchlist) && (
-          <div
-            className="movie-card-control-row"
-            style={movieStyles.posterControlRow}
-            onClick={(event) => event.stopPropagation()}
-          >
-            {onToggleWatched ? (
-              <button
-                className="movie-card-button"
-                type="button"
-                aria-label={isWatched ? "Mark as unwatched" : "Mark as watched"}
-                aria-pressed={isWatched}
-                title={isWatched ? "Mark as unwatched" : "Mark as watched"}
-                onClick={() => onToggleWatched(movie)}
-                style={{
-                  ...movieStyles.posterControl,
-                  backgroundColor: "rgba(25, 24, 30, 0.55)",
-                  border: `1px solid ${isWatched ? "#10b981" : "#4a4651"}`,
-                  boxShadow: isWatched
-                    ? "0 0 8px rgba(16, 185, 129, 0.65)"
-                    : "none",
-                  color: "#10b981"
-                }}
-              >
-                <Eye size={16} />
-              </button>
-            ) : (
-              <span />
-            )}
-            {onSaveRating ? (
-              <button
-                className="movie-card-button"
-                type="button"
-                aria-label={
-                  hasUserRating
-                    ? `Change your rating for ${movie.title}`
-                    : `Rate ${movie.title}`
-                }
-                title={
-                  hasUserRating
-                    ? `Your rating: ${userRating} / 10`
-                    : "Rate this movie"
-                }
-                onClick={() => setReviewComposerOpen(true)}
-                style={{
-                  ...movieStyles.posterControl,
-                  ...movieStyles.userRatingButton,
-                  color: "#60a5fa",
-                  backgroundColor: "transparent",
-                  borderColor: "#3b82f6",
-                  boxShadow: "0 0 8px rgba(59, 130, 246, 0.65)"
-                }}
-              >
-                <Star
-                  size={14}
-                  fill={hasUserRating ? "currentColor" : "none"}
-                />
-                {hasUserRating && (
-                  <span style={{ color: "#60a5fa" }}>{userRating}</span>
-                )}
-              </button>
-            ) : (
-              <span />
-            )}
-            {onToggleWatchlist ? (
-              <button
-                className="movie-card-button"
-                type="button"
-                aria-label={
-                  isInWatchlist ? "Remove from watchlist" : "Add to watchlist"
-                }
-                aria-pressed={isInWatchlist}
-                title={
-                  isInWatchlist ? "Remove from watchlist" : "Add to watchlist"
-                }
-                onClick={() => onToggleWatchlist(movie)}
-                style={{
-                  ...movieStyles.posterControl,
-                  backgroundColor: isInWatchlist
-                    ? "rgba(244, 201, 107, 0.16)"
-                    : "transparent",
-                  borderColor: isInWatchlist ? "#f4c96b" : "#4a4651",
-                  color: "#f4c96b",
-                  boxShadow: isInWatchlist
-                    ? "0 0 0 1px rgba(244, 201, 107, 0.65), 0 0 8px rgba(244, 201, 107, 0.45)"
-                    : "none"
-                }}
-              >
-                <Bookmark
-                  size={16}
-                  fill={isInWatchlist ? "currentColor" : "none"}
-                />
-              </button>
-            ) : (
-              <span />
-            )}
-          </div>
-        )}
+        <MovieCardControls
+          movie={movie}
+          userRating={userRating}
+          isWatched={isWatched}
+          isInWatchlist={isInWatchlist}
+          onToggleWatched={onToggleWatched}
+          onToggleWatchlist={onToggleWatchlist}
+          onOpenRating={
+            onSaveRating ? () => setReviewComposerOpen(true) : undefined
+          }
+        />
       </div>
       {reviewComposerOpen && (
         <ReviewComposerDialog

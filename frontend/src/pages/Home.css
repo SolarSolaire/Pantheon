@@ -1,5 +1,5 @@
 .home-content-layout {
-  --home-horizontal-gutter: clamp(20px, 5vw, 72px);
+  --home-horizontal-gutter: clamp(16px, 2vw, 32px);
   position: relative;
   /* Changed from a 2-column grid to a single column flexbox since the sidebar is gone */
   display: flex; 
@@ -63,8 +63,9 @@
 
 .recent-reviews-heading {
   margin: 0;
-  color: #f5f3ef;
+  color: #c7c3ce;
   font-size: 1.45rem; 
+  font-weight: 600;
 }
 
 .recent-reviews-carousel {
@@ -84,7 +85,7 @@
   border-radius: 4px;
 }
 
-.recent-review-card {
+.recent-reviews-carousel .recent-review-card {
   flex: 0 0 300px; /* Forces cards to be exactly 300px wide */
   scroll-snap-align: start;
   padding: 16px;
@@ -97,21 +98,38 @@
 }
 
 .recent-review-movie {
-  color: #f5f3ef;
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: #c7c3ce;
   font-size: 1rem;
-  font-weight: 700;
+  font-weight: 600;
   text-decoration: none;
-  overflow-wrap: anywhere;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .recent-review-movie:hover {
   color: #60a5fa;
 }
 
+.recent-review-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.recent-review-movie {
+  flex: 1 1 auto;
+}
+
 .recent-review-meta {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
   font-size: 0.85rem;
   color: #aaa7b2;
 }
@@ -129,6 +147,7 @@
   font-size: 0.95rem;
   color: #d0cdd5;
   line-height: 1.5;
+  font-style: italic;
   display: -webkit-box;
   -webkit-line-clamp: 4; /* Truncates after 4 lines */
   -webkit-box-orient: vertical;
@@ -152,11 +171,11 @@
 }
 
 .home-content-layout {
-  --home-horizontal-gutter: clamp(20px, 5vw, 72px);
+  --home-horizontal-gutter: clamp(16px, 2vw, 32px);
+  --recent-reviews-width: 300px;
   position: relative;
   display: grid;
-  /* 1fr for movies, 340px fixed width for the reviews sidebar */
-  grid-template-columns: minmax(0, 1fr) 340px; 
+  grid-template-columns: minmax(0, 1fr) var(--recent-reviews-width);
   gap: var(--home-horizontal-gutter);
   align-items: start;
 }
@@ -164,6 +183,7 @@
 /* If the screen gets too small, stack them vertically */
 @media (max-width: 1024px) {
   .home-content-layout {
+    --home-horizontal-gutter: clamp(20px, 5vw, 72px);
     grid-template-columns: 1fr;
   }
 }
@@ -190,22 +210,23 @@
 }
 
 .recent-reviews-header {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   flex-shrink: 0;
 }
 
 .recent-reviews-heading {
   margin: 0;
-  color: #f5f3ef;
+  color: #c7c3ce;
   font-size: 1.45rem; 
+  font-weight: 600;
 }
 
 .recent-reviews-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
   overflow-y: auto;
-  padding-right: 12px; /* Room for the scrollbar */
+  padding-right: 8px;
 }
 
 /* Hides the scrollbar background but keeps the thumb */
@@ -218,22 +239,26 @@
 }
 
 .recent-review-card {
-  padding: 16px;
+  padding: 12px;
   background-color: #19181e;
   border: 1px solid #2b2931;
   border-radius: 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  flex-shrink: 0; /* Prevents cards from squishing */
+  gap: 6px;
+  flex: 0 0 auto;
 }
 
 .recent-review-movie {
-  color: #f5f3ef;
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: #c7c3ce;
   font-size: 1rem;
-  font-weight: 700;
+  font-weight: 600;
   text-decoration: none;
-  overflow-wrap: anywhere;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .recent-review-movie:hover {
@@ -242,8 +267,10 @@
 
 .recent-review-meta {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
   font-size: 0.85rem;
   color: #aaa7b2;
 }
@@ -269,9 +296,16 @@
 }
 
 .recent-review-timestamp {
-  margin-top: auto; 
+  align-self: auto;
+  margin: 0;
   font-size: 0.8rem;
   color: #85818d;
+  white-space: nowrap;
+}
+
+.recent-review-author {
+  color: #aaa7b2;
+  font-size: 0.85rem;
 }
 
 .recent-reviews-message {

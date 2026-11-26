@@ -11,10 +11,15 @@ import {
 } from "lucide-react";
 import { isAuthenticated } from "../utils/auth";
 import { fetchMovieDetails } from "../api/tmdb";
-import { fetchMovieReviews, fetchUserProfile, logoutUser } from "../api/userData";
+import {
+  fetchMovieReviews,
+  fetchUserProfile,
+  logoutUser,
+  saveUserReview
+} from "../api/userData";
 import useUserRatings from "../hooks/useUserRatings";
 import useUserWatchlist from "../hooks/useUserWatchlist";
-import { MovieRatingDialog } from "../components/MovieCard";
+import ReviewComposerDialog from "../components/ReviewComposerDialog";
 import Navbar from "../components/Navbar";
 
 const IMAGE_URL = "https://image.tmdb.org/t/p/w500";
@@ -405,7 +410,7 @@ export default function MovieDetails() {
   const [reviewsLoading, setReviewsLoading] = useState(true);
   const [error, setError] = useState("");
   const [reviewsError, setReviewsError] = useState("");
-  const [ratingDialogOpen, setRatingDialogOpen] = useState(false);
+  const [reviewComposerOpen, setReviewComposerOpen] = useState(false);
   const { userRatings, ratingsError, handleSaveRating, handleClearRating } =
     useUserRatings();
   const {
@@ -447,20 +452,29 @@ export default function MovieDetails() {
     };
   }, [navigate]);
 
-  async function saveRatingAndMarkWatched(ratingMovie, rating) {
-    const saved = await handleSaveRating(ratingMovie, rating);
-    if (saved === false) return false;
-
+  async function markMovieWatched(ratingMovie) {
     const userTitle = userTitles.find(
       (title) => String(title.id) === String(ratingMovie.id),
     );
     if (userTitle?.watched) return true;
+    return handleToggleWatched(ratingMovie);
+  }
 
-    const watched = await handleToggleWatched(ratingMovie);
-    if (watched === false) {
-      throw new Error("Rating saved, but could not mark the movie as watched.");
-    }
-    return true;
+  async function saveMovieReview(reviewMovie, reviewText) {
+    const savedReview = await saveUserReview(reviewMovie, reviewText);
+    fetchMovieReviews(reviewMovie.id)
+      .then((updatedReviews) => {
+        setReviews(updatedReviews || []);
+        setReviewsError("");
+      })
+      .catch((refreshError) => {
+        setReviewsError(
+          refreshError.response?.data?.message ||
+            refreshError.message ||
+            "Could not refresh reviews.",
+        );
+      });
+    return savedReview;
   }
 
   async function handleAuthAction() {
@@ -639,20 +653,23 @@ export default function MovieDetails() {
 
                 <div style={pageStyles.actions}>
                   <button
+                    className="movie-card-button"
                     type="button"
                     disabled={watchlistLoading}
                     aria-pressed={Boolean(userTitle?.in_watchlist)}
                     onClick={() => handleToggleWatchlist(movie)}
                     style={{
                       ...pageStyles.actionButton,
-                      ...(userTitle?.in_watchlist
-                        ? {
-                            backgroundColor: "rgba(244, 201, 107, 0.14)",
-                            borderColor: "#f4c96b",
-                            color: "#f4c96b",
-                            boxShadow: "0 0 8px rgba(244, 201, 107, 0.4)",
-                          }
-                        : {}),
+                      backgroundColor: userTitle?.in_watchlist
+                        ? "rgba(244, 201, 107, 0.08)"
+                        : "transparent",
+                      borderColor: userTitle?.in_watchlist
+                        ? "#f4c96b"
+                        : "rgba(244, 201, 107, 0.35)",
+                      color: "#f4c96b",
+                      boxShadow: userTitle?.in_watchlist
+                        ? "0 0 8px rgba(244, 201, 107, 0.45)"
+                        : "none",
                     }}
                   >
                     <Bookmark
@@ -666,19 +683,23 @@ export default function MovieDetails() {
                     </span>
                   </button>
                   <button
+                    className="movie-card-button"
                     type="button"
                     disabled={watchlistLoading}
                     aria-pressed={Boolean(userTitle?.watched)}
                     onClick={() => handleToggleWatched(movie)}
                     style={{
                       ...pageStyles.actionButton,
-                      ...(userTitle?.watched
-                        ? {
-                            borderColor: "#10b981",
-                            color: "#10b981",
-                            boxShadow: "0 0 8px rgba(16, 185, 129, 0.65)",
-                          }
-                        : {}),
+                      backgroundColor: userTitle?.watched
+                        ? "rgba(16, 185, 129, 0.08)"
+                        : "transparent",
+                      borderColor: userTitle?.watched
+                        ? "#10b981"
+                        : "rgba(16, 185, 129, 0.35)",
+                      color: "#10b981",
+                      boxShadow: userTitle?.watched
+                        ? "0 0 8px rgba(16, 185, 129, 0.65)"
+                        : "none",
                     }}
                   >
                     {userTitle?.watched ? (
@@ -693,14 +714,27 @@ export default function MovieDetails() {
                     </span>
                   </button>
                   <button
+                    className="movie-card-button"
                     type="button"
-                    onClick={() => setRatingDialogOpen(true)}
-                    style={pageStyles.actionButton}
+                    onClick={() => setReviewComposerOpen(true)}
+                    style={{
+                      ...pageStyles.actionButton,
+                      backgroundColor: userRating
+                        ? "rgba(59, 130, 246, 0.08)"
+                        : "transparent",
+                      borderColor: userRating
+                        ? "#3b82f6"
+                        : "rgba(59, 130, 246, 0.35)",
+                      color: "#60a5fa",
+                      boxShadow: userRating
+                        ? "0 0 8px rgba(59, 130, 246, 0.65)"
+                        : "none",
+                    }}
                   >
                     <Star
                       size={17}
-                      fill={userRating ? "#f4c96b" : "none"}
-                      color="#f4c96b"
+                      fill={userRating ? "#60a5fa" : "none"}
+                      color="#60a5fa"
                     />
                     <span>
                       {userRating
@@ -831,13 +865,16 @@ export default function MovieDetails() {
           </>
         )}
       </main>
-      {ratingDialogOpen && movie && (
-        <MovieRatingDialog
+      {reviewComposerOpen && movie && (
+        <ReviewComposerDialog
           movie={movie}
+          productionCompany={productionCompanies[0] || ""}
           userRating={userRating}
-          onSave={saveRatingAndMarkWatched}
-          onClear={handleClearRating}
-          onClose={() => setRatingDialogOpen(false)}
+          onSaveRating={handleSaveRating}
+          onClearRating={handleClearRating}
+          onMarkWatched={markMovieWatched}
+          onSave={saveMovieReview}
+          onClose={() => setReviewComposerOpen(false)}
         />
       )}
     </div>

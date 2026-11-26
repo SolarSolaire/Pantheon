@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { RotateCcw, Star, X } from "lucide-react";
+import { Star, X } from "lucide-react";
 import { fetchMovieProductionCompany } from "../api/tmdb";
 import { fetchUserReview } from "../api/userData";
 
@@ -14,33 +14,37 @@ const styles = {
     justifyContent: "center",
     padding: "20px",
     backgroundColor: "rgba(0, 0, 0, 0.82)",
-    backdropFilter: "blur(6px)"
+    backdropFilter: "blur(6px)",
+    opacity: 1,
+    transition: "opacity 180ms ease"
   },
   dialog: {
     position: "relative",
-    width: "min(760px, 100%)",
+    width: "min(560px, 100%)",
+    boxSizing: "border-box",
     maxHeight: "calc(100vh - 40px)",
     overflowY: "auto",
-    padding: "28px",
+    padding: "24px 16px 16px",
     border: "1px solid #393740",
     borderRadius: "14px",
     backgroundColor: "#19181e",
     color: "#f5f3ef",
-    boxShadow: "0 20px 40px rgba(0,0,0,0.6)"
+    boxShadow: "0 20px 40px rgba(0,0,0,0.6)",
+    transform: "translateY(8px) scale(0.98)",
+    transition: "transform 180ms ease"
   },
   close: {
     position: "absolute",
     top: "16px",
-    right: "16px",
+    right: "calc(5% - 3.5px)",
     zIndex: 1,
     width: "36px",
     height: "36px",
     display: "grid",
     placeItems: "center",
     padding: 0,
-    border: "1px solid #44414b",
-    borderRadius: "50%",
-    backgroundColor: "#242229",
+    border: "none",
+    backgroundColor: "transparent",
     color: "#f5f3ef",
     cursor: "pointer"
   },
@@ -50,7 +54,8 @@ const styles = {
     fontSize: "0.9rem"
   },
   sectionTitle: {
-    margin: "0 0 10px",
+    margin: "0 0 14px",
+    textAlign: "center",
     color: "#f5f3ef",
     fontSize: "1rem"
   },
@@ -59,7 +64,7 @@ const styles = {
     alignItems: "center",
     justifyContent: "space-between",
     gap: "2px",
-    marginBottom: "14px"
+    marginBottom: "18px"
   },
   ratingStarButton: {
     display: "grid",
@@ -73,29 +78,18 @@ const styles = {
     cursor: "pointer",
     transition: "transform 140ms ease, filter 140ms ease"
   },
-  clearRating: {
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-    margin: "0 0 12px auto",
-    padding: "4px 0",
-    border: "none",
-    backgroundColor: "transparent",
-    color: "#aaa7b2",
-    font: "inherit",
-    fontSize: "0.82rem",
-    cursor: "pointer"
-  },
   reviewToggle: {
     display: "block",
-    margin: "0 0 10px",
-    padding: "8px 12px",
-    border: "1px solid #4a4651",
-    borderRadius: "8px",
+    margin: "0 0 14px",
+    marginLeft: "max(0px, calc(5% - 10.9px))",
+    padding: 0,
+    border: "none",
     backgroundColor: "transparent",
-    color: "#f4c96b",
+    color: "#60a5fa",
     font: "inherit",
     fontWeight: 700,
+    textDecoration: "underline",
+    textUnderlineOffset: "3px",
     cursor: "pointer"
   },
   reviewField: {
@@ -114,7 +108,7 @@ const styles = {
   },
   textarea: {
     width: "100%",
-    minHeight: "160px",
+    minHeight: "180px",
     resize: "vertical",
     boxSizing: "border-box",
     padding: "12px",
@@ -135,7 +129,7 @@ const styles = {
     alignItems: "center",
     justifyContent: "space-between",
     gap: "12px",
-    marginTop: "14px"
+    marginTop: "18px"
   },
   count: {
     color: "#aaa7b2",
@@ -165,6 +159,9 @@ export default function ReviewComposerDialog({
   canWriteReview = true,
   onClose
 }) {
+  const [isClosing, setIsClosing] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  const closeTimerRef = useRef(null);
   const [reviewText, setReviewText] = useState(initialReview ?? "");
   const [reviewLoaded, setReviewLoaded] = useState(initialReview !== undefined);
   const [reviewLoadError, setReviewLoadError] = useState("");
@@ -174,6 +171,29 @@ export default function ReviewComposerDialog({
   const [reviewExpanded, setReviewExpanded] = useState(initialReview !== undefined);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  function handleClose() {
+    if (isClosing) return;
+    setIsClosing(true);
+    closeTimerRef.current = window.setTimeout(() => {
+      closeTimerRef.current = null;
+      onClose();
+    }, 180);
+  }
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => setIsVisible(true));
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (closeTimerRef.current !== null) {
+        window.clearTimeout(closeTimerRef.current);
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     setRating(Math.round(Number(userRating) || 0));
@@ -250,7 +270,7 @@ export default function ReviewComposerDialog({
         );
         return;
       }
-      onClose();
+      handleClose();
     } catch (saveError) {
       setError(saveError.message || "Could not save your review.");
     } finally {
@@ -259,19 +279,34 @@ export default function ReviewComposerDialog({
   }
 
   return createPortal(
-    <div style={styles.overlay} onClick={onClose}>
+    <div
+      style={{
+        ...styles.overlay,
+        opacity: isVisible && !isClosing ? 1 : 0,
+        pointerEvents: isVisible && !isClosing ? "auto" : "none"
+      }}
+      onClick={(event) => {
+        event.stopPropagation();
+        if (event.target === event.currentTarget) handleClose();
+      }}
+    >
       <article
-        style={styles.dialog}
+        style={{
+          ...styles.dialog,
+          ...(isVisible && !isClosing
+            ? { transform: "translateY(0) scale(1)" }
+            : {})
+        }}
         onClick={(event) => event.stopPropagation()}
         onKeyDown={(event) => {
-          if (event.key === "Escape") onClose();
+          if (event.key === "Escape") handleClose();
         }}
       >
         <button
           type="button"
           style={styles.close}
           aria-label="Close review editor"
-          onClick={onClose}
+          onClick={handleClose}
         >
           <X size={18} />
         </button>
@@ -300,6 +335,25 @@ export default function ReviewComposerDialog({
                   onBlur={() => setHoveredRating(0)}
                   onClick={async () => {
                     const previousRating = rating;
+                    if (starRating === previousRating) {
+                      if (!onClearRating) return;
+                      try {
+                        const cleared = await onClearRating(movie);
+                        if (cleared === false) {
+                          setError("Could not clear your rating.");
+                          return;
+                        }
+                        setRating(0);
+                        setHoveredRating(0);
+                        setError("");
+                      } catch (ratingError) {
+                        setError(
+                          ratingError.message || "Could not clear your rating."
+                        );
+                      }
+                      return;
+                    }
+
                     setRating(starRating);
                     try {
                       const saved = await onSaveRating?.(
@@ -326,7 +380,7 @@ export default function ReviewComposerDialog({
                   }}
                   style={{
                     ...styles.ratingStarButton,
-                    color: isSelected ? "#f4c96b" : "#85818d"
+                    color: isSelected ? "#60a5fa" : "#85818d"
                   }}
                 >
                   <Star size={20} fill={isSelected ? "currentColor" : "none"} />
@@ -334,28 +388,6 @@ export default function ReviewComposerDialog({
               );
             })}
           </div>
-          {onClearRating && rating > 0 && reviewLoaded && !reviewText.trim() && (
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  const cleared = await onClearRating(movie);
-                  if (cleared === false) {
-                    setError("Delete your review before clearing its rating.");
-                    return;
-                  }
-                  setRating(0);
-                  setError("");
-                } catch (ratingError) {
-                  setError(ratingError.message || "Could not clear your rating.");
-                }
-              }}
-              style={styles.clearRating}
-            >
-              <RotateCcw size={13} />
-              <span>Clear rating</span>
-            </button>
-          )}
           {canWriteReview && (
             <button
               type="button"
@@ -390,7 +422,6 @@ export default function ReviewComposerDialog({
               style={styles.textarea}
             />
           </div>
-          {!reviewLoaded && <p style={styles.metadata}>Loading your review...</p>}
           {reviewLoadError && <p style={styles.error}>{reviewLoadError}</p>}
           {reviewExpanded && canWriteReview && rating < 1 && (
             <p style={styles.metadata}>A rating is required to save a review.</p>

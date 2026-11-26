@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchMovieDetails } from "../api/tmdb"; // <-- Added this import
 import {
   addMovieToUserWatchlist,
@@ -9,11 +9,55 @@ import {
   setUserTitleWatched
 } from "../api/userData";
 
+function mergeUserTitleStatus(userTitles, movie, status) {
+  const titleId = String(status.id ?? movie.id);
+  const existingIndex = userTitles.findIndex(
+    (item) => String(item.id) === titleId
+  );
+  const existingTitle = userTitles[existingIndex];
+  if (!status.in_watchlist && !status.watched) {
+    return userTitles.filter((item) => String(item.id) !== titleId);
+  }
+
+  const updatedTitle = {
+    ...(existingTitle || movie),
+    id: status.id ?? movie.id,
+    media_type: existingTitle?.media_type || movie.media_type || "movie",
+    in_watchlist: status.in_watchlist,
+    watched: status.watched,
+    watched_at: status.watched_at ?? null,
+    added_at: status.added_at ?? existingTitle?.added_at ?? null
+  };
+  const nextTitles = [...userTitles];
+  if (existingIndex === -1) {
+    nextTitles.push(updatedTitle);
+  } else {
+    nextTitles[existingIndex] = updatedTitle;
+  }
+  return nextTitles.sort((left, right) => {
+    const addedAtDifference =
+      (Date.parse(left.added_at || "") || 0) -
+      (Date.parse(right.added_at || "") || 0);
+    return addedAtDifference || Number(left.id) - Number(right.id);
+  });
+}
+
+function restoreUserTitle(userTitles, movieId, title, previousIndex) {
+  const nextTitles = userTitles.filter(
+    (item) => String(item.id) !== movieId
+  );
+  if (title) {
+    nextTitles.splice(Math.min(previousIndex, nextTitles.length), 0, title);
+  }
+  return nextTitles;
+}
+
 export default function useUserWatchlist() {
   const [userTitles, setUserTitles] = useState([]);
   const [reviewedMovieIds, setReviewedMovieIds] = useState(() => new Set());
   const [watchlistError, setWatchlistError] = useState("");
   const [watchlistLoading, setWatchlistLoading] = useState(true);
+  const pendingWatchlistIds = useRef(new Set());
 
   useEffect(() => {
     const controller = new AbortController();
@@ -48,19 +92,60 @@ export default function useUserWatchlist() {
   }, []);
 
   const handleToggleWatchlist = useCallback(async (movie) => {
-    const userTitle = userTitles.find(
-      (item) => String(item.id) === String(movie.id)
+    const movieId = String(movie.id);
+    if (pendingWatchlistIds.current.has(movieId)) return false;
+    pendingWatchlistIds.current.add(movieId);
+
+    const previousIndex = userTitles.findIndex(
+      (item) => String(item.id) === movieId
     );
+    const previousTitle = userTitles[previousIndex];
+    const shouldAddToWatchlist = !previousTitle?.in_watchlist;
+    const optimisticStatus = {
+      id: movie.id,
+      in_watchlist: shouldAddToWatchlist,
+      watched: Boolean(previousTitle?.watched),
+      watched_at: previousTitle?.watched_at ?? null,
+      added_at: shouldAddToWatchlist
+        ? new Date().toISOString()
+        : previousTitle?.added_at ?? null
+    };
+
+    setUserTitles((currentTitles) =>
+      mergeUserTitleStatus(currentTitles, movie, optimisticStatus)
+    );
+    setWatchlistError("");
+
     try {
-      const updatedUserTitles = userTitle?.in_watchlist
-        ? await removeMovieFromUserWatchlist(movie.id)
-        : await addMovieToUserWatchlist(movie);
-      setUserTitles(updatedUserTitles);
-      setWatchlistError("");
+      const updatedStatus = shouldAddToWatchlist
+        ? await addMovieToUserWatchlist(movie)
+        : await removeMovieFromUserWatchlist(movie.id);
+      if (
+        updatedStatus?.id == null ||
+        String(updatedStatus.id) !== movieId ||
+        typeof updatedStatus.in_watchlist !== "boolean" ||
+        typeof updatedStatus.watched !== "boolean"
+      ) {
+        throw new Error("The server returned an invalid watchlist status.");
+      }
+
+      setUserTitles((currentTitles) =>
+        mergeUserTitleStatus(currentTitles, movie, updatedStatus)
+      );
       return true;
     } catch (error) {
+      setUserTitles((currentTitles) =>
+        restoreUserTitle(
+          currentTitles,
+          movieId,
+          previousTitle,
+          previousIndex
+        )
+      );
       setWatchlistError(error.message || "Could not update your watchlist.");
       return false;
+    } finally {
+      pendingWatchlistIds.current.delete(movieId);
     }
   }, [userTitles]);
 

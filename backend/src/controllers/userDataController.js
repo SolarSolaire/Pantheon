@@ -153,31 +153,29 @@ exports.clearRating = (req, res) => {
   if (!movieId) return res.status(400).json({ message: 'A valid movie ID is required.' });
 
   return handleDatabaseError(res, 'Could not clear user rating.', async () => {
-    const result = await db.query(
-      `DELETE FROM user_feedback
+    const reviewedTitle = await db.query(
+      `UPDATE user_feedback
+       SET rating = NULL,
+           updated_at = CURRENT_TIMESTAMP
+       FROM titles
+       WHERE user_feedback.title_id = titles.title_id
+         AND user_feedback.user_id = $1
+         AND titles.tmdb_id = $2
+         AND user_feedback.review_text IS NOT NULL
+       RETURNING user_feedback.feedback_id`,
+      [req.user.user_id, movieId]
+    );
+    if (reviewedTitle.rowCount === 0) {
+      await db.query(
+        `DELETE FROM user_feedback
        USING titles
        WHERE user_feedback.title_id = titles.title_id
          AND user_feedback.user_id = $1
          AND titles.tmdb_id = $2
          AND user_feedback.review_text IS NULL
-       RETURNING user_feedback.feedback_id`,
-      [req.user.user_id, movieId]
-    );
-    if (result.rowCount === 0) {
-      const existingReview = await db.query(
-        `SELECT 1
-         FROM user_feedback
-         JOIN titles USING (title_id)
-         WHERE user_feedback.user_id = $1
-           AND titles.tmdb_id = $2
-           AND user_feedback.review_text IS NOT NULL`,
+        RETURNING user_feedback.feedback_id`,
         [req.user.user_id, movieId]
       );
-      if (existingReview.rowCount > 0) {
-        return res.status(409).json({
-          message: 'Delete your review before clearing its rating.'
-        });
-      }
     }
     res.status(204).end();
   });
@@ -202,7 +200,7 @@ exports.addWatchlistMovie = (req, res) => {
 
   return handleDatabaseError(res, 'Could not add movie to watchlist.', async () => {
     const titleId = await upsertTitle(movieData);
-    await db.query(
+    const updatedTitle = await db.query(
       `INSERT INTO user_titles (user_id, title_id, in_watchlist)
        VALUES ($1, $2, TRUE)
        ON CONFLICT (user_id, title_id)
@@ -210,10 +208,19 @@ exports.addWatchlistMovie = (req, res) => {
                      added_at = CASE
                        WHEN NOT user_titles.in_watchlist THEN CURRENT_TIMESTAMP
                        ELSE user_titles.added_at
-                     END`,
+                     END
+       RETURNING watched, watched_at, added_at`,
       [req.user.user_id, titleId]
     );
-    res.json({ titles: await getUserTitles(req.user.user_id) });
+    const status = updatedTitle.rows[0];
+    if (!status) throw new Error('Could not read the updated watchlist status.');
+    res.json({
+      id: Number(movieId),
+      in_watchlist: true,
+      watched: status.watched,
+      watched_at: status.watched_at,
+      added_at: status.added_at
+    });
   });
 };
 
@@ -283,7 +290,7 @@ exports.removeWatchlistMovie = (req, res) => {
          AND NOT user_titles.watched`,
       [req.user.user_id, movieId]
     );
-    await db.query(
+    const updatedTitle = await db.query(
       `UPDATE user_titles
        SET in_watchlist = FALSE
        FROM titles
@@ -291,10 +298,18 @@ exports.removeWatchlistMovie = (req, res) => {
          AND user_titles.user_id = $1
          AND titles.tmdb_id = $2
          AND user_titles.in_watchlist
-         AND user_titles.watched`,
+         AND user_titles.watched
+       RETURNING watched_at, added_at`,
       [req.user.user_id, movieId]
     );
-    res.json({ titles: await getUserTitles(req.user.user_id) });
+    const status = updatedTitle.rows[0];
+    res.json({
+      id: Number(movieId),
+      in_watchlist: false,
+      watched: Boolean(status),
+      watched_at: status?.watched_at ?? null,
+      added_at: status?.added_at ?? null
+    });
   });
 };
 

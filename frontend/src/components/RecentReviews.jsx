@@ -27,14 +27,14 @@ export default function RecentReviews({
         <div className="recent-reviews-list">
           {reviews.map((review) => (
             <article key={review.review_id} className="recent-review-card">
-              <Link
-                to={`/movies/${review.movie_id}`}
-                className="recent-review-movie"
-              >
-                {review.movie_data?.title || "Unknown Movie"}
-              </Link>
-              <div className="recent-review-meta">
-                <span className="recent-review-author">by {review.username}</span>
+              <div className="recent-review-title-row">
+                <Link
+                  to={`/movies/${review.movie_id}`}
+                  className="recent-review-movie"
+                  title={review.movie_data?.title || "Unknown Movie"}
+                >
+                  {review.movie_data?.title || "Unknown Movie"}
+                </Link>
                 {review.user_rating != null && (
                   <div className="recent-review-rating">
                     <Star size={12} fill="#f4c96b" color="#f4c96b" />
@@ -43,9 +43,12 @@ export default function RecentReviews({
                 )}
               </div>
               <p className="recent-review-text">{review.review_text}</p>
-              <span className="recent-review-timestamp">
-                {new Date(review.created_at).toLocaleDateString()}
-              </span>
+              <div className="recent-review-meta">
+                <span className="recent-review-author">by {review.username}</span>
+                <span className="recent-review-timestamp">
+                  {new Date(review.created_at).toLocaleDateString()}
+                </span>
+              </div>
             </article>
           ))}
         </div>
